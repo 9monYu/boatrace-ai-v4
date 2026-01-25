@@ -1,1 +1,1 @@
-# boatrace-ai-v4
+# 🚤 boatrace-ai-v4 🤖

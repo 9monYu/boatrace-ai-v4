@@ -1,0 +1,9 @@
+alembic
+beautifulsoup4
+lhafile
+lightgbm
+numpy
+pandas
+requests
+selenium
+tqdm

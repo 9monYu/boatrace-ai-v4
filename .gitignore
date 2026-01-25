@@ -182,9 +182,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
@@ -205,3 +205,21 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# boatrace-ai-v4
+/config/config.py
+/database/*
+!/database/.gitkeep
+/dataset/*
+!/dataset/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/official_data/race/*.TXT
+/official_data/race/*.lzh
+/official_data/result/*.TXT
+/official_data/result/*.lzh
+/temp/*
+!/temp/.gitkeep
+/sample*.py
+/memo*.md
+/chromedriver.exe
