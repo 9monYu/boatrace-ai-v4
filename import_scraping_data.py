@@ -75,6 +75,7 @@ def main():
                         racer.boat_top3_rate = float(row[20]) if row[20] != "" else None
                         racer.before_info_course = int(row[21]) if row[21] != "" else None
                         racer.before_info_start_timing = float(row[22]) if row[22] != "" else None
+                        racer.before_info_start_timing_abs = abs(float(row[22])) if row[22] != "" else None
                         racer.before_info_weight = float(row[23]) if row[23] != "" else None
                         racer.before_info_adjusted_weight = float(row[24]) if row[24] != "" else None
                         racer.before_info_display_time = float(row[25]) if row[25] != "" else None
@@ -405,6 +406,67 @@ def main():
                             if before_info_display_time_std > 0
                             else 0.0
                         )
+                    # ability_index
+                    if (
+                        racer.average_start_timing_z_score is not None
+                        and racer.all_venue_win_rate_z_score is not None
+                        and racer.this_venue_win_rate_z_score is not None
+                        and racer.motor_top2_rate_z_score is not None
+                    ):
+                        racer.ability_index = (
+                            racer.average_start_timing_z_score
+                            + racer.all_venue_win_rate_z_score
+                            + racer.this_venue_win_rate_z_score
+                            + racer.motor_top2_rate_z_score
+                        )
+                    # before_info_index
+                    if (
+                        racer.before_info_start_timing_abs_z_score is not None
+                        and racer.before_info_display_time_z_score is not None
+                    ):
+                        racer.before_info_index = (
+                            racer.before_info_start_timing_abs_z_score + racer.before_info_display_time_z_score
+                        )
+
+                # ability_index
+                ability_index_list = [racer.ability_index for racer in racer_list if racer.ability_index is not None]
+                ability_index_list.sort(reverse=True)
+                ability_index_mean = numpy.mean(ability_index_list) if ability_index_list else None
+                ability_index_std = numpy.std(ability_index_list) if ability_index_list else None
+                # before_info_index
+                before_info_index_list = [
+                    racer.before_info_index for racer in racer_list if racer.before_info_index is not None
+                ]
+                before_info_index_list.sort(reverse=True)
+                before_info_index_mean = numpy.mean(before_info_index_list) if before_info_index_list else None
+                before_info_index_std = numpy.std(before_info_index_list) if before_info_index_list else None
+
+                for racer in racer_list:
+                    # ability_index
+                    if (
+                        racer.ability_index is not None
+                        and ability_index_mean is not None
+                        and ability_index_std is not None
+                    ):
+                        racer.ability_index_rank = ability_index_list.index(racer.ability_index) + 1
+                        racer.ability_index_z_score = (
+                            (racer.ability_index - ability_index_mean) / ability_index_std
+                            if ability_index_std > 0
+                            else 0.0
+                        )
+                    # before_info_index
+                    if (
+                        racer.before_info_index is not None
+                        and before_info_index_mean is not None
+                        and before_info_index_std is not None
+                    ):
+                        racer.before_info_index_rank = before_info_index_list.index(racer.before_info_index) + 1
+                        racer.before_info_index_z_score = (
+                            (racer.before_info_index - before_info_index_mean) / before_info_index_std
+                            if before_info_index_std > 0
+                            else 0.0
+                        )
+
             SESSION.commit()
 
     # deadline odds

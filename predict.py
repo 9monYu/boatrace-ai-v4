@@ -14,23 +14,18 @@ from models import Ticket
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("year", type=int)
-    parser.add_argument("period", type=int, choices=[1, 2])
     args = parser.parse_args()
 
-    if os.path.exists(os.path.join(os.getcwd(), "dataset", f"{args.year}_{args.period}_test.csv")):
-        test_df = pandas.read_csv(
-            os.path.join(os.getcwd(), "dataset", f"{args.year}_{args.period}_test.csv"), index_col=0
-        )
+    if os.path.exists(os.path.join(os.getcwd(), "dataset", f"{args.year}_eval.csv")):
+        eval_df = pandas.read_csv(os.path.join(os.getcwd(), "dataset", f"{args.year}_eval.csv"), index_col=0)
 
         deltas_list = []
         for seed in range(SEED_COUNT):
-            model = lightgbm.Booster(
-                model_file=os.path.join(os.getcwd(), "models", f"{args.year}_{args.period}_{seed + 1:02d}.txt")
-            )
-            deltas = model.predict(test_df, raw_score=True)
+            model = lightgbm.Booster(model_file=os.path.join(os.getcwd(), "models", f"{args.year}_{seed + 1:02d}.txt"))
+            deltas = model.predict(eval_df, raw_score=True)
             deltas_list.append(deltas)
 
-        for race_index, race_id in tqdm(enumerate(test_df.index), total=len(test_df)):
+        for race_index, race_id in tqdm(enumerate(eval_df.index), total=len(eval_df)):
             ticket_list = (
                 SESSION.query(Ticket)
                 .filter(
@@ -52,8 +47,8 @@ def main():
 
             for trifecta in TRIFECTA_LIST:
                 ticket = ticket_by_trifecta[trifecta]
-                ticket.model_share = (ticket.market_share * math.exp(ticket.delta)) / sum_exp_score
-                ticket.funanyu_index = round((ticket.model_share / ticket.market_share) * 100, 2)
+                ticket.probability = (ticket.market_share * math.exp(ticket.delta)) / sum_exp_score
+                ticket.expected_value = ticket.probability * ticket.deadline_odds
 
         SESSION.commit()
 

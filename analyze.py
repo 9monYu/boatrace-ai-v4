@@ -8,8 +8,6 @@ from models import Race, Ticket
 
 
 def main():
-    start = datetime.now()
-
     parser = argparse.ArgumentParser()
     parser.add_argument("start", type=int)
     parser.add_argument("end", type=int)
@@ -43,7 +41,15 @@ def main():
         .all()
     )
 
-    for first_boat in [1, 2, 3, 4, 5, 6]:
+    for first_boat in [
+        9,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+    ]:
         with open(
             os.path.join(os.getcwd(), "temp", f"analysis{first_boat}_{args.start}_{args.end}.csv"),
             "w",
@@ -51,14 +57,50 @@ def main():
             encoding="utf-8",
         ) as f:
             writer = csv.writer(f, delimiter="\t")
-            for funanyu_index in range(101, 151):
+            for expected_value in [
+                0.80,
+                0.85,
+                0.90,
+                0.95,
+                1.00,
+                1.05,
+                1.10,
+                1.15,
+                1.20,
+                1.25,
+                1.30,
+                1.35,
+                1.40,
+                1.45,
+                1.50,
+                1.55,
+                1.60,
+                1.65,
+                1.70,
+                1.75,
+                1.80,
+                1.85,
+                1.90,
+                1.95,
+                2.00,
+            ]:
                 row = []
-                for market_share in [
-                    0.0300,  # 3.00% ≒ 25.0
-                    0.0200,  # 2.00% ≒ 37.5
-                    0.0150,  # 1.50% ≒ 50.0
-                    0.0100,  # 1.00% ≒ 75.0
-                    0.0075,  # 0.75% ≒ 100.0
+                for odds in [
+                    (1.0, 20.0),
+                    (20.0, 40.0),
+                    (40.0, 60.0),
+                    (60.0, 80.0),
+                    (80.0, 100.0),
+                    (100.0, 120.0),
+                    (120.0, 140.0),
+                    (140.0, 160.0),
+                    (160.0, 180.0),
+                    (180.0, 200.0),
+                    (200.0, 220.0),
+                    (220.0, 240.0),
+                    (240.0, 260.0),
+                    (260.0, 280.0),
+                    (280.0, 300.0),
                 ]:
                     bet_race = 0
                     hit_race = 0
@@ -67,16 +109,15 @@ def main():
                     peak = 0
                     max_dd = 0
                     for race in race_list:
-                        ticket_list = (
-                            SESSION.query(Ticket)
-                            .filter(
-                                Ticket.race_id == race.id,
-                                Ticket.first == first_boat,
-                                Ticket.market_share >= market_share,
-                                Ticket.funanyu_index >= funanyu_index,
-                            )
-                            .all()
-                        )
+                        conditions = [
+                            Ticket.race_id == race.id,
+                            Ticket.deadline_odds >= odds[0],
+                            Ticket.deadline_odds < odds[1],
+                            Ticket.expected_value >= expected_value,
+                        ]
+                        if first_boat in [1, 2, 3, 4, 5, 6]:
+                            conditions.append(Ticket.first == first_boat)
+                        ticket_list = SESSION.query(Ticket).filter(*conditions).all()
                         if ticket_list:
                             bet_race += 1
                             for ticket in ticket_list:
@@ -102,9 +143,10 @@ def main():
                     row.append(-max_dd)
 
                     print("[rule]")
-                    print(f"first boat   : {first_boat}")
-                    print(f"market share : >={market_share}")
-                    print(f"funanyu index: >={funanyu_index}")
+                    if first_boat in [1, 2, 3, 4, 5, 6]:
+                        print(f"first boat    : {first_boat}")
+                    print(f"odds          : {odds[0]} - {odds[1]}")
+                    print(f"expected value: >={expected_value}")
 
                     print("\n[stats]")
                     print(f"bet race : {bet_race:,}")
@@ -118,9 +160,6 @@ def main():
                     print("--\n\n")
 
                 writer.writerow(row)
-
-    print(f"start: {start.strftime("%Y-%m-%d %H:%M:%S")}")
-    print(f"end  : {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
 
 
 if __name__ == "__main__":

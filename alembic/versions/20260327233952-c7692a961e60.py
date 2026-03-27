@@ -1,8 +1,8 @@
 """
 
-Revision ID: e8df798da06d
+Revision ID: c7692a961e60
 Revises: 
-Create Date: 2026-03-06 21:56:43.402643
+Create Date: 2026-03-27 23:39:52.967441
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e8df798da06d'
+revision: str = 'c7692a961e60'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -84,13 +84,13 @@ def upgrade() -> None:
     sa.Column('before_info_temperature', sa.INTEGER(), nullable=True),
     sa.Column('before_info_weather', sa.TEXT(), nullable=True),
     sa.Column('before_info_wind_speed', sa.INTEGER(), nullable=True),
-    sa.Column('before_info_wind_direction', sa.TEXT(), nullable=True),
+    sa.Column('before_info_wind_direction', sa.INTEGER(), nullable=True),
     sa.Column('before_info_water_temperature', sa.INTEGER(), nullable=True),
     sa.Column('before_info_wave_height', sa.INTEGER(), nullable=True),
     sa.Column('temperature', sa.INTEGER(), nullable=True),
     sa.Column('weather', sa.TEXT(), nullable=True),
     sa.Column('wind_speed', sa.INTEGER(), nullable=True),
-    sa.Column('wind_direction', sa.TEXT(), nullable=True),
+    sa.Column('wind_direction', sa.INTEGER(), nullable=True),
     sa.Column('water_temperature', sa.INTEGER(), nullable=True),
     sa.Column('wave_height', sa.INTEGER(), nullable=True),
     sa.Column('first', sa.INTEGER(), nullable=True),
@@ -158,6 +158,12 @@ def upgrade() -> None:
     sa.Column('before_info_display_time_rank', sa.INTEGER(), nullable=True),
     sa.Column('before_info_display_time_z_score', sa.REAL(), nullable=True),
     sa.Column('before_info_tilt', sa.REAL(), nullable=True),
+    sa.Column('ability_index', sa.REAL(), nullable=True),
+    sa.Column('ability_index_rank', sa.REAL(), nullable=True),
+    sa.Column('ability_index_z_score', sa.INTEGER(), nullable=True),
+    sa.Column('before_info_index', sa.REAL(), nullable=True),
+    sa.Column('before_info_index_rank', sa.INTEGER(), nullable=True),
+    sa.Column('before_info_index_z_score', sa.REAL(), nullable=True),
     sa.Column('course', sa.INTEGER(), nullable=True),
     sa.Column('start_timing', sa.REAL(), nullable=True),
     sa.Column('result', sa.INTEGER(), nullable=True),
@@ -175,8 +181,8 @@ def upgrade() -> None:
     sa.Column('deadline_odds_rank', sa.INTEGER(), nullable=True),
     sa.Column('market_share', sa.REAL(), nullable=True),
     sa.Column('delta', sa.REAL(), nullable=True),
-    sa.Column('model_share', sa.REAL(), nullable=True),
-    sa.Column('funanyu_index', sa.REAL(), nullable=True),
+    sa.Column('probability', sa.REAL(), nullable=True),
+    sa.Column('expected_value', sa.REAL(), nullable=True),
     sa.ForeignKeyConstraint(['race_id'], ['races.id'], ),
     sa.PrimaryKeyConstraint('race_id', 'first', 'second', 'third')
     )

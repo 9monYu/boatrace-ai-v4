@@ -13,29 +13,21 @@ from models import Race
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("start", type=int)
-    parser.add_argument("--end", type=int)
+    parser.add_argument("end", type=int)
     args = parser.parse_args()
 
-    start = args.start
     try:
-        datetime.strptime(str(start), "%Y%m%d")
+        datetime.strptime(str(args.start), "%Y%m%d")
+        datetime.strptime(str(args.end), "%Y%m%d")
     except ValueError:
-        print("ERROR")
-        return
-
-    end = args.end if args.end is not None else int(str(args.start)[:4] + "1231")
-    try:
-        datetime.strptime(str(end), "%Y%m%d")
-    except ValueError:
-        print("ERROR")
         return
 
     race_list = (
         SESSION.query(Race)
         .filter(
             Race.is_cancel == 0,
-            Race.date >= start,
-            Race.date <= end,
+            Race.date >= args.start,
+            Race.date <= args.end,
         )
         .order_by(Race.id.asc())
         .all()
