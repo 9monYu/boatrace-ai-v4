@@ -191,12 +191,12 @@ PARAMETERS = {
     "learning_rate": 0.01,  # 0.1
     "max_depth": 4,  # -1
     "num_leaves": 15,  # 31
-    "min_data_in_leaf": 30000,  # 20
+    "min_data_in_leaf": 500,  # 20
     "min_gain_to_split": 0.0,  # 0.0
     "lambda_l1": 0,  # 0
-    "lambda_l2": 3000,  # 0
-    "feature_fraction": 0.80,  # 1.0
-    "bagging_fraction": 0.80,  # 1.0
+    "lambda_l2": 5000,  # 0
+    "feature_fraction": 0.8,  # 1.0
+    "bagging_fraction": 0.8,  # 1.0
     "bagging_freq": 1,  # 0
     "verbosity": -1,
 }

@@ -4,6 +4,7 @@ import os
 import statistics
 from datetime import datetime
 
+from sqlalchemy import and_, or_
 from tqdm import tqdm
 
 from constants import SESSION
@@ -61,9 +62,9 @@ def main():
         for race in tqdm(race_list):
             bet_unit = 100
             if bankroll is not None:
-                bet_unit = bankroll // 100000 * 100
-                if bet_unit < 500:
-                    bet_unit = 500
+                bet_unit = bankroll // 200000 * 100
+                if bet_unit < 100:
+                    bet_unit = 100
                 elif bet_unit > 5000:
                     bet_unit = 5000
                 else:
@@ -72,9 +73,28 @@ def main():
                 SESSION.query(Ticket)
                 .filter(
                     Ticket.race_id == race.id,
-                    Ticket.deadline_odds >= 1.0,
-                    Ticket.deadline_odds < 300.0,
-                    Ticket.expected_value >= 1.10,
+                    or_(
+                        and_(
+                            Ticket.deadline_odds >= 1.0,
+                            Ticket.deadline_odds < 40.0,
+                            Ticket.expected_value >= 1.10,
+                        ),
+                        and_(
+                            Ticket.deadline_odds >= 40.0,
+                            Ticket.deadline_odds < 80.0,
+                            Ticket.expected_value >= 1.10,
+                        ),
+                        and_(
+                            Ticket.deadline_odds >= 80.0,
+                            Ticket.deadline_odds < 120.0,
+                            Ticket.expected_value >= 1.10,
+                        ),
+                        and_(
+                            Ticket.deadline_odds >= 120.0,
+                            Ticket.deadline_odds < 200.0,
+                            Ticket.expected_value >= 1.10,
+                        ),
+                    ),
                 )
                 .all()
             )
