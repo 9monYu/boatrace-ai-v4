@@ -6,7 +6,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from constants import SESSION, VENUE_ID_BY_NAME
+from constants import SESSION
 from models import Race
 
 
@@ -36,7 +36,6 @@ def main():
         if race_index == 0 or race.date != race_list[race_index - 1].date:
             print(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {race.date}")
 
-        venue = VENUE_ID_BY_NAME[race.venue]
         racer_list = [
             [],
             [],
@@ -47,7 +46,7 @@ def main():
         ]
 
         # race and racer
-        url = f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={venue}&hd={race.date}"
+        url = f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
         try:
             response = requests.get(url)
         except Exception:
@@ -75,20 +74,11 @@ def main():
             pass
 
         is_last_day = 0
-        if (
-            beautifulsoup.find("li", class_="is-active2")
-            .find("span", class_="tab2_inner")
-            .find("span")
-            .get_text(strip=True)
-            == "最終日"
-        ):
+        if beautifulsoup.find("li", class_="is-active2").find("span", class_="tab2_inner").find("span").get_text(strip=True) == "最終日":
             is_last_day = 1
 
         has_stabilizer = 0
-        if (
-            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
-            is not None
-        ):
+        if beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1") is not None:
             has_stabilizer = 1
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
@@ -174,7 +164,7 @@ def main():
                 racer_list[racer_index].append(None)
 
         # before info
-        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={venue}&hd={race.date}"
+        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
         try:
             response = requests.get(url)
         except Exception:
@@ -199,9 +189,7 @@ def main():
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
         #  temperature
         try:
-            before_info_temperature = float(
-                soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-            )
+            before_info_temperature = float(soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
         except Exception:
             pass
         # weather
@@ -211,9 +199,7 @@ def main():
             pass
         # wind speed
         try:
-            before_info_wind_speed = int(
-                soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
-            )
+            before_info_wind_speed = int(soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", ""))
         except Exception:
             pass
         # wind direction
@@ -226,16 +212,12 @@ def main():
             pass
         # water temperature
         try:
-            before_info_water_temperature = float(
-                soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-            )
+            before_info_water_temperature = float(soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
         except Exception:
             pass
         # wave height
         try:
-            before_info_wave_height = int(
-                soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
-            )
+            before_info_wave_height = int(soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", ""))
         except Exception:
             pass
 
@@ -395,7 +377,7 @@ def main():
         racer_list[5].extend(boat6_before_info_list)
 
         # result
-        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={venue}&hd={race.date}"
+        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
         try:
             response = requests.get(url)
         except Exception:
@@ -422,9 +404,7 @@ def main():
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
         #  temperature
         try:
-            temperature = float(
-                soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-            )
+            temperature = float(soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
         except Exception:
             pass
         # weather
@@ -434,9 +414,7 @@ def main():
             pass
         # wind speed
         try:
-            wind_speed = int(
-                soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
-            )
+            wind_speed = int(soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", ""))
         except Exception:
             pass
         # wind direction
@@ -449,32 +427,24 @@ def main():
             pass
         # water temperature
         try:
-            water_temperature = float(
-                soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-            )
+            water_temperature = float(soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
         except Exception:
             pass
         # wave height
         try:
-            wave_height = int(
-                soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
-            )
+            wave_height = int(soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", ""))
         except Exception:
             pass
 
         # winning style
         try:
-            winning_style = (
-                beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
-            )
+            winning_style = beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
         except Exception:
             pass
 
         # course
         # start timing
-        for course, soup in enumerate(
-            beautifulsoup.find("table", class_="is-h292__3rdadd").find("tbody").find_all("tr"), start=1
-        ):
+        for course, soup in enumerate(beautifulsoup.find("table", class_="is-h292__3rdadd").find("tbody").find_all("tr"), start=1):
             boat_number_span = soup.find("span", class_="table1_boatImage1Number")
             if boat_number_span is not None:
                 try:
@@ -624,7 +594,7 @@ def main():
                 writer.writerow(racer)
 
         # deadline odds
-        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={venue}&hd={race.date}"
+        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
         try:
             response = requests.get(url)
         except Exception:

@@ -42,7 +42,7 @@ def main():
     )
 
     for first_boat in [
-        9,
+        2345,
         1,
         2,
         3,
@@ -57,55 +57,16 @@ def main():
             encoding="utf-8",
         ) as f:
             writer = csv.writer(f, delimiter="\t")
-            for expected_value in [
-                0.75,
-                0.80,
-                0.85,
-                0.90,
-                0.95,
-                1.00,
-                1.01,
-                1.02,
-                1.03,
-                1.04,
-                1.05,
-                1.06,
-                1.07,
-                1.08,
-                1.09,
-                1.10,
-                1.11,
-                1.12,
-                1.13,
-                1.14,
-                1.15,
-                1.16,
-                1.17,
-                1.18,
-                1.19,
-                1.20,
-                1.21,
-                1.22,
-                1.23,
-                1.24,
-                1.25,
-                1.26,
-                1.27,
-                1.28,
-                1.29,
-                1.30,
-                1.31,
-                1.32,
-                1.33,
-                1.34,
-                1.35,
-            ]:
+            for ev in range(90, 151):
+                expected_value = ev / 100
                 row = []
                 for odds in [
-                    (1.0, 40.0),
-                    (40.0, 80.0),
-                    (80.0, 120.0),
-                    (120.0, 200.0),
+                    (1.0, 50.0),
+                    (50.0, 100.0),
+                    (100.0, 200.0),
+                    (200.0, 300.0),
+                    (300.0, 400.0),
+                    (400.0, 500.0),
                 ]:
                     bet_race = 0
                     hit_race = 0
@@ -116,12 +77,11 @@ def main():
                     for race in race_list:
                         conditions = [
                             Ticket.race_id == race.id,
+                            Ticket.first.in_([int(fb) for fb in str(first_boat)]),
                             Ticket.deadline_odds >= odds[0],
                             Ticket.deadline_odds < odds[1],
                             Ticket.expected_value >= expected_value,
                         ]
-                        if first_boat in [1, 2, 3, 4, 5, 6]:
-                            conditions.append(Ticket.first == first_boat)
                         ticket_list = SESSION.query(Ticket).filter(*conditions).all()
                         if ticket_list:
                             bet_race += 1
@@ -148,8 +108,7 @@ def main():
                     row.append(-max_dd)
 
                     print("[rule]")
-                    if first_boat in [1, 2, 3, 4, 5, 6]:
-                        print(f"first boat    : {first_boat}")
+                    print(f"first boat    : {first_boat}")
                     print(f"odds          : {odds[0]} - {odds[1]}")
                     print(f"expected value: >={expected_value}")
 
