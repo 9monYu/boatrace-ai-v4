@@ -71,26 +71,22 @@ def main():
                 SESSION.query(Ticket)
                 .filter(
                     Ticket.race_id == race.id,
+                    Ticket.first.in_([2, 3, 4, 5]),
                     or_(
                         and_(
                             Ticket.deadline_odds >= 1.0,
                             Ticket.deadline_odds < 50.0,
-                            Ticket.expected_value >= 1.10,
+                            Ticket.expected_value >= 1.30,
                         ),
                         and_(
                             Ticket.deadline_odds >= 50.0,
                             Ticket.deadline_odds < 100.0,
-                            Ticket.expected_value >= 1.10,
+                            Ticket.expected_value >= 1.25,
                         ),
                         and_(
                             Ticket.deadline_odds >= 100.0,
-                            Ticket.deadline_odds < 200.0,
-                            Ticket.expected_value >= 1.10,
-                        ),
-                        and_(
-                            Ticket.deadline_odds >= 200.0,
-                            Ticket.deadline_odds < 300.0,
-                            Ticket.expected_value >= 1.10,
+                            Ticket.deadline_odds < 400.0,
+                            Ticket.expected_value >= 1.15,
                         ),
                     ),
                 )
