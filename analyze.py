@@ -80,7 +80,7 @@ def main():
                             Ticket.first.in_([int(fb) for fb in str(first_boat)]),
                             Ticket.deadline_odds >= odds[0],
                             Ticket.deadline_odds < odds[1],
-                            Ticket.expected_value >= expected_value,
+                            Ticket.deadline_odds_expected_value >= expected_value,
                         ]
                         ticket_list = SESSION.query(Ticket).filter(*conditions).all()
                         if ticket_list:

@@ -15,7 +15,6 @@ def main():
     for file in tqdm(os.listdir(race_directory_path)):
         if file.startswith("B") and (file.endswith(".txt") or file.endswith(".TXT")):
             with open(os.path.join(race_directory_path, file), "r", encoding="CP932") as f:
-                race_id = None
                 venue = None
                 day_number = None
                 date_ = f'20{file.split(".")[0][1:]}'

@@ -31,7 +31,7 @@ def main():
                 .filter(
                     Ticket.race_id == race_id,
                     Ticket.deadline_odds.isnot(None),
-                    Ticket.market_share.isnot(None),
+                    Ticket.deadline_odds_market_share.isnot(None),
                 )
                 .all()
             )
@@ -42,13 +42,13 @@ def main():
             for trifecta_index, trifecta in enumerate(TRIFECTA_LIST):
                 ticket = ticket_by_trifecta[trifecta]
                 ticket.delta = statistics.mean(deltas[race_index][trifecta_index] for deltas in deltas_list)
-                sum_exp_score += ticket.market_share * math.exp(ticket.delta)
-                # sum_exp_score += math.exp(math.log(ticket.market_share) + ticket.delta)
+                sum_exp_score += ticket.deadline_odds_market_share * math.exp(ticket.delta)
+                # sum_exp_score += math.exp(math.log(ticket.deadline_odds_market_share) + ticket.delta)
 
             for trifecta in TRIFECTA_LIST:
                 ticket = ticket_by_trifecta[trifecta]
-                ticket.probability = (ticket.market_share * math.exp(ticket.delta)) / sum_exp_score
-                ticket.expected_value = ticket.probability * ticket.deadline_odds
+                ticket.deadline_odds_probability = (ticket.deadline_odds_market_share * math.exp(ticket.delta)) / sum_exp_score
+                ticket.deadline_odds_expected_value = ticket.deadline_odds_probability * ticket.deadline_odds
 
         SESSION.commit()
 

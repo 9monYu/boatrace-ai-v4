@@ -107,7 +107,7 @@ def main():
                     .filter(
                         Ticket.race_id == race.id,
                         Ticket.deadline_odds.isnot(None),
-                        Ticket.market_share.isnot(None),
+                        Ticket.deadline_odds_market_share.isnot(None),
                     )
                     .count()
                     == 120

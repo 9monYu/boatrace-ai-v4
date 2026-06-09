@@ -76,17 +76,17 @@ def main():
                         and_(
                             Ticket.deadline_odds >= 1.0,
                             Ticket.deadline_odds < 50.0,
-                            Ticket.expected_value >= 1.30,
+                            Ticket.deadline_odds_expected_value >= 1.30,
                         ),
                         and_(
                             Ticket.deadline_odds >= 50.0,
                             Ticket.deadline_odds < 100.0,
-                            Ticket.expected_value >= 1.25,
+                            Ticket.deadline_odds_expected_value >= 1.25,
                         ),
                         and_(
                             Ticket.deadline_odds >= 100.0,
                             Ticket.deadline_odds < 400.0,
-                            Ticket.expected_value >= 1.15,
+                            Ticket.deadline_odds_expected_value >= 1.15,
                         ),
                     ),
                 )

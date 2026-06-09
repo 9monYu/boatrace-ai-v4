@@ -92,6 +92,7 @@ class Race(BASE):
 
     racers = relationship("Racer", backref=__tablename__)
     tickets = relationship("Ticket", backref=__tablename__)
+    bets = relationship("Bet", backref=__tablename__)
 
 
 class Racer(BASE):
@@ -136,7 +137,6 @@ class Racer(BASE):
     before_info_weight = Column(REAL)
     before_info_adjusted_weight = Column(REAL)
     before_info_display_time = Column(REAL)
-    before_info_display_time_rank = Column(INTEGER)
     before_info_display_time_z_score = Column(REAL)
     before_info_tilt = Column(REAL)
     last5_1st_count = Column(INTEGER)
@@ -215,9 +215,21 @@ class Ticket(BASE):
     second = Column(INTEGER, primary_key=True)
     third = Column(INTEGER, primary_key=True)
     is_hit = Column(INTEGER)
-    deadline_odds = Column(REAL)
-    deadline_odds_rank = Column(INTEGER)
-    market_share = Column(REAL)
     delta = Column(REAL)
-    probability = Column(REAL)
-    expected_value = Column(REAL)
+    deadline_odds = Column(REAL)
+    deadline_odds_market_share = Column(REAL)
+    deadline_odds_probability = Column(REAL)
+    deadline_odds_expected_value = Column(REAL)
+    before_deadline_odds = Column(REAL)
+    before_deadline_odds_market_share = Column(REAL)
+    before_deadline_odds_probability = Column(REAL)
+    before_deadline_odds_expected_value = Column(REAL)
+
+
+class Bet(BASE):
+    __tablename__ = "bets"
+
+    race_id = Column(INTEGER, ForeignKey("races.id"), primary_key=True)
+    first = Column(INTEGER, primary_key=True)
+    second = Column(INTEGER, primary_key=True)
+    third = Column(INTEGER, primary_key=True)

@@ -252,8 +252,7 @@ def main():
                     for index in range(120):
                         is_hit = 1 if race.first == TRIFECTA_LIST[index][0] and race.second == TRIFECTA_LIST[index][1] and race.third == TRIFECTA_LIST[index][2] else 0
                         deadline_odds = float(row[index]) if row[index] and row[index] != "0.0" else None
-                        market_share = (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
-                        deadline_odds_rank = deadline_odds_list.index(deadline_odds) + 1 if deadline_odds else None
+                        deadline_odds_market_share = (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
                         ticket_list.append(
                             Ticket(
                                 race_id=race_id,
@@ -262,8 +261,7 @@ def main():
                                 third=TRIFECTA_LIST[index][2],
                                 is_hit=is_hit,
                                 deadline_odds=deadline_odds,
-                                deadline_odds_rank=deadline_odds_rank,
-                                market_share=market_share,
+                                deadline_odds_market_share=deadline_odds_market_share,
                             )
                         )
             SESSION.add_all(ticket_list)

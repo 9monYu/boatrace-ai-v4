@@ -26,12 +26,12 @@ def main():
                 .filter(
                     Ticket.race_id == race_id,
                     Ticket.deadline_odds.isnot(None),
-                    Ticket.market_share.isnot(None),
+                    Ticket.deadline_odds_market_share.isnot(None),
                 )
                 .all()
             )
             ticket_by_trifecta = {(ticket.first, ticket.second, ticket.third): ticket for ticket in ticket_list}
-            train_market_share_list.append([ticket_by_trifecta[trifecta].market_share for trifecta in TRIFECTA_LIST])
+            train_market_share_list.append([ticket_by_trifecta[trifecta].deadline_odds_market_share for trifecta in TRIFECTA_LIST])
 
         train_set = lightgbm.Dataset(
             x_train,
