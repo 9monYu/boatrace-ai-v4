@@ -225,3 +225,5 @@ __marimo__/
 /sample*.py
 /memo*.md
 /chromedriver.exe
+
+.DS_Store
