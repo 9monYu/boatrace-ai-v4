@@ -40,16 +40,15 @@ def download(url, download_directory, start, end):
         select.select_by_index(ym_index)
         driver.switch_to.default_content()
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "JYOU")))
-        for day_index in range(len(wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY"))))):
-            radios = wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY")))
-            radios[day_index].click()
+        for radio in wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY"))):
+            radio.click()
             download_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@onclick="download(this)"]')))
             download_button.click()
         driver.switch_to.default_content()
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
         select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))
         select = Select(select_box)
-    time.sleep(10)
+    time.sleep(5)
     driver.quit()
 
 
