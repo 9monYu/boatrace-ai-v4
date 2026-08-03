@@ -18,6 +18,7 @@ import requests
 import schedule
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
@@ -1969,7 +1970,7 @@ def bet(race_id: int):
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
+        wait = WebDriverWait(driver=driver, timeout=10)
 
         driver.get("https://www.boatrace.jp/owpc/pc/login")
 
@@ -2218,7 +2219,7 @@ def daily():
     driver = None
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
+        wait = WebDriverWait(driver=driver, timeout=10)
 
         driver.get("https://www1.mbrace.or.jp/od2/B/dindex.html")
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
@@ -2354,13 +2355,18 @@ def daily():
     driver = None
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
+        wait = WebDriverWait(driver=driver, timeout=10)
 
         driver.get("https://login.paypay-bank.co.jp/")
         wait.until(EC.element_to_be_clickable((By.ID, "idTenNo"))).send_keys(PAYPAY_BANK_STORE_NUMBER)
         wait.until(EC.element_to_be_clickable((By.ID, "idKozaNo"))).send_keys(PAYPAY_BANK_ACCOUNT_NUMBER)
         wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
         wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
+        try:
+            wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance")))
+        except TimeoutException:
+            wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
+            wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
         balance_text = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance"))).text
         balance = int(balance_text.replace(",", "").replace("円", ""))
         wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "p.logoutWrap > a.logout"))).click()
