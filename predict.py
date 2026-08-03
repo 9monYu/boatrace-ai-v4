@@ -47,7 +47,9 @@ def main():
 
             for trifecta in TRIFECTA_LIST:
                 ticket = ticket_by_trifecta[trifecta]
-                ticket.deadline_odds_probability = (ticket.deadline_odds_market_share * math.exp(ticket.delta)) / sum_exp_score
+                ticket.deadline_odds_probability = (
+                    ticket.deadline_odds_market_share * math.exp(ticket.delta)
+                ) / sum_exp_score
                 ticket.deadline_odds_expected_value = ticket.deadline_odds_probability * ticket.deadline_odds
 
         SESSION.commit()

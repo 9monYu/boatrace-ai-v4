@@ -42,7 +42,11 @@ def main():
                         period_start = date(int(date_[:4]) - 1, 11, 1)
                         period_end = date(int(date_[:4]), 4, 30)
                     period_progress_rate = round(
-                        ((date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - period_start).days / (period_end - period_start).days) * 100,
+                        (
+                            (date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - period_start).days
+                            / (period_end - period_start).days
+                        )
+                        * 100,
                         2,
                     )
                     for line in f.readlines():
@@ -180,14 +184,18 @@ def main():
                                         race.odds_trio = round(int(words[4]) / 100, 1)
                                         race.odds_exacta = round(int(words[6]) / 100, 1)
                                     # 3連単● 3連複× 2連単● 2連複×
-                                    elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[4]):
+                                    elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
+                                        r"^[1-6]{1}-[1-6]{1}$", words[4]
+                                    ):
                                         race.first = int(words[1].split("-")[0])
                                         race.second = int(words[1].split("-")[1])
                                         race.third = int(words[1].split("-")[2])
                                         race.odds_trifecta = round(int(words[2]) / 100, 1)
                                         race.odds_exacta = round(int(words[5]) / 100, 1)
                                     # 3連単× 3連複× 2連単● 2連複●
-                                    elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5]):
+                                    elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(
+                                        r"^[1-6]{1}-[1-6]{1}$", words[5]
+                                    ):
                                         race.first = int(words[3].split("-")[0])
                                         race.second = int(words[3].split("-")[1])
                                         race.odds_exacta = round(int(words[4]) / 100, 1)
@@ -202,7 +210,9 @@ def main():
                                         race.odds_exacta = round(int(words[4]) / 100, 1)
                                 elif len(words) == 5:
                                     # 3連単- 3連複- 2連単● 2連複●
-                                    if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]):
+                                    if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
+                                        r"^[1-6]{1}-[1-6]{1}$", words[3]
+                                    ):
                                         race.first = int(words[1].split("-")[0])
                                         race.second = int(words[1].split("-")[1])
                                         race.odds_exacta = round(int(words[2]) / 100, 1)

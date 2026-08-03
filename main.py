@@ -26,8 +26,25 @@ from selenium.webdriver.support.ui import WebDriverWait
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from config.config import AUTH_PASSWORD, BET_PASSWORD, PASSWORD_NUMBER, PAYPAY_BANK_ACCOUNT_NUMBER, PAYPAY_BANK_PASSWORD, PAYPAY_BANK_STORE_NUMBER, SUBSCRIBER_NUMBER
-from constants import CSV_COLUMN_LIST, GRADE_LIST, RACER_CLASS_LIST, SEED_COUNT, SESSION, TRIFECTA_LIST, WEATHER_LIST, WIND_DIRECTION_ANGLES
+from config.config import (
+    AUTH_PASSWORD,
+    BET_PASSWORD,
+    PASSWORD_NUMBER,
+    PAYPAY_BANK_ACCOUNT_NUMBER,
+    PAYPAY_BANK_PASSWORD,
+    PAYPAY_BANK_STORE_NUMBER,
+    SUBSCRIBER_NUMBER,
+)
+from constants import (
+    CSV_COLUMN_LIST,
+    GRADE_LIST,
+    RACER_CLASS_LIST,
+    SEED_COUNT,
+    SESSION,
+    TRIFECTA_LIST,
+    WEATHER_LIST,
+    WIND_DIRECTION_ANGLES,
+)
 from models import Bet, PeriodStat, Race, Racer, Ticket, VenueStat
 
 _logger = logging.getLogger(__name__)
@@ -42,7 +59,9 @@ def run_thread(target):
 
 def import_race_data(target_date: date):
     if os.path.isfile(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT')):
-        with open(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932") as f:
+        with open(
+            os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932"
+        ) as f:
             venue = None
             day_number = None
             date_ = target_date.strftime("%Y%m%d")
@@ -101,7 +120,9 @@ def import_race_data(target_date: date):
 
 def import_result_data(target_date: date):
     if os.path.isfile(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT")):
-        with open(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
+        with open(
+            os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932"
+        ) as f:
             date_ = target_date.strftime("%Y%m%d")
             venue = None
             for line in f.readlines():
@@ -190,14 +211,18 @@ def import_result_data(target_date: date):
                                 race.odds_trio = round(int(words[4]) / 100, 1)
                                 race.odds_exacta = round(int(words[6]) / 100, 1)
                             # 3連単● 3連複× 2連単● 2連複×
-                            elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[4]):
+                            elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
+                                r"^[1-6]{1}-[1-6]{1}$", words[4]
+                            ):
                                 race.first = int(words[1].split("-")[0])
                                 race.second = int(words[1].split("-")[1])
                                 race.third = int(words[1].split("-")[2])
                                 race.odds_trifecta = round(int(words[2]) / 100, 1)
                                 race.odds_exacta = round(int(words[5]) / 100, 1)
                             # 3連単× 3連複× 2連単● 2連複●
-                            elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5]):
+                            elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(
+                                r"^[1-6]{1}-[1-6]{1}$", words[5]
+                            ):
                                 race.first = int(words[3].split("-")[0])
                                 race.second = int(words[3].split("-")[1])
                                 race.odds_exacta = round(int(words[4]) / 100, 1)
@@ -212,7 +237,9 @@ def import_result_data(target_date: date):
                                 race.odds_exacta = round(int(words[4]) / 100, 1)
                         elif len(words) == 5:
                             # 3連単- 3連複- 2連単● 2連複●
-                            if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]):
+                            if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
+                                r"^[1-6]{1}-[1-6]{1}$", words[3]
+                            ):
                                 race.first = int(words[1].split("-")[0])
                                 race.second = int(words[1].split("-")[1])
                                 race.odds_exacta = round(int(words[2]) / 100, 1)
@@ -255,7 +282,9 @@ def scrape(target_date: date):
         ]
 
         # race and racer
-        url = f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        url = (
+            f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        )
         try:
             response = requests.get(url)
         except Exception:
@@ -283,11 +312,20 @@ def scrape(target_date: date):
             pass
 
         is_last_day = 0
-        if beautifulsoup.find("li", class_="is-active2").find("span", class_="tab2_inner").find("span").get_text(strip=True) == "最終日":
+        if (
+            beautifulsoup.find("li", class_="is-active2")
+            .find("span", class_="tab2_inner")
+            .find("span")
+            .get_text(strip=True)
+            == "最終日"
+        ):
             is_last_day = 1
 
         has_stabilizer = 0
-        if beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1") is not None:
+        if (
+            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+            is not None
+        ):
             has_stabilizer = 1
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
@@ -398,7 +436,9 @@ def scrape(target_date: date):
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
         #  temperature
         try:
-            before_info_temperature = float(soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
+            before_info_temperature = float(
+                soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
         except Exception:
             pass
         # weather
@@ -408,7 +448,9 @@ def scrape(target_date: date):
             pass
         # wind speed
         try:
-            before_info_wind_speed = int(soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", ""))
+            before_info_wind_speed = int(
+                soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+            )
         except Exception:
             pass
         # wind direction
@@ -421,12 +463,16 @@ def scrape(target_date: date):
             pass
         # water temperature
         try:
-            before_info_water_temperature = float(soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
+            before_info_water_temperature = float(
+                soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
         except Exception:
             pass
         # wave height
         try:
-            before_info_wave_height = int(soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", ""))
+            before_info_wave_height = int(
+                soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
+            )
         except Exception:
             pass
 
@@ -613,7 +659,9 @@ def scrape(target_date: date):
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
         #  temperature
         try:
-            temperature = float(soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
+            temperature = float(
+                soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
         except Exception:
             pass
         # weather
@@ -623,7 +671,9 @@ def scrape(target_date: date):
             pass
         # wind speed
         try:
-            wind_speed = int(soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", ""))
+            wind_speed = int(
+                soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+            )
         except Exception:
             pass
         # wind direction
@@ -636,24 +686,32 @@ def scrape(target_date: date):
             pass
         # water temperature
         try:
-            water_temperature = float(soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
+            water_temperature = float(
+                soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
         except Exception:
             pass
         # wave height
         try:
-            wave_height = int(soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", ""))
+            wave_height = int(
+                soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
+            )
         except Exception:
             pass
 
         # winning style
         try:
-            winning_style = beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
+            winning_style = (
+                beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
+            )
         except Exception:
             pass
 
         # course
         # start timing
-        for course, soup in enumerate(beautifulsoup.find("table", class_="is-h292__3rdadd").find("tbody").find_all("tr"), start=1):
+        for course, soup in enumerate(
+            beautifulsoup.find("table", class_="is-h292__3rdadd").find("tbody").find_all("tr"), start=1
+        ):
             boat_number_span = soup.find("span", class_="table1_boatImage1Number")
             if boat_number_span is not None:
                 try:
@@ -805,7 +863,9 @@ def scrape(target_date: date):
 
 def import_scraping_data(target_date: date):
     if os.path.isfile(os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv")):
-        with open(os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8") as f:
+        with open(
+            os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
+        ) as f:
             for row in csv.reader(f):
                 race_id = int(row[0])
                 race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
@@ -833,12 +893,18 @@ def import_scraping_data(target_date: date):
             raise
 
     if os.path.isfile(os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv")):
-        with open(os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8") as f:
+        with open(
+            os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
+        ) as f:
             racer_list = []
             for row in csv.reader(f):
                 race_id = int(row[0])
                 boat_number = int(row[1])
-                racer = SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one_or_none()
+                racer = (
+                    SESSION.query(Racer)
+                    .filter(Racer.race_id == race_id, Racer.boat_number == boat_number)
+                    .one_or_none()
+                )
                 if racer is not None:
                     racer.racer_number = int(row[2])
                     racer.racer_class = row[3]
@@ -1060,15 +1126,23 @@ def scrape_before_info(race_id: int):
     beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
     soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-    race.before_info_temperature = float(soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
+    race.before_info_temperature = float(
+        soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+    )
     race.before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
-    race.before_info_wind_speed = int(soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", ""))
+    race.before_info_wind_speed = int(
+        soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+    )
     for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
         if class_.startswith("is-wind"):
             race.before_info_wind_direction = int(class_.replace("is-wind", ""))
             break
-    race.before_info_water_temperature = float(soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", ""))
-    race.before_info_wave_height = int(soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", ""))
+    race.before_info_water_temperature = float(
+        soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+    )
+    race.before_info_wave_height = int(
+        soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
+    )
     try:
         SESSION.commit()
     except SQLAlchemyError:
@@ -1122,7 +1196,9 @@ def calculate_z_scores(race_id: int):
     racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).order_by(Racer.boat_number.asc()).all()
 
     # average_start_timing
-    average_start_timing_list = [racer.average_start_timing for racer in racer_list if racer.average_start_timing is not None]
+    average_start_timing_list = [
+        racer.average_start_timing for racer in racer_list if racer.average_start_timing is not None
+    ]
     average_start_timing_mean = numpy.mean(average_start_timing_list) if average_start_timing_list else None
     average_start_timing_std = numpy.std(average_start_timing_list) if average_start_timing_list else None
     # all_venue_win_rate
@@ -1130,23 +1206,33 @@ def calculate_z_scores(race_id: int):
     all_venue_win_rate_mean = numpy.mean(all_venue_win_rate_list) if all_venue_win_rate_list else None
     all_venue_win_rate_std = numpy.std(all_venue_win_rate_list) if all_venue_win_rate_list else None
     # all_venue_top2_rate
-    all_venue_top2_rate_list = [racer.all_venue_top2_rate for racer in racer_list if racer.all_venue_top2_rate is not None]
+    all_venue_top2_rate_list = [
+        racer.all_venue_top2_rate for racer in racer_list if racer.all_venue_top2_rate is not None
+    ]
     all_venue_top2_rate_mean = numpy.mean(all_venue_top2_rate_list) if all_venue_top2_rate_list else None
     all_venue_top2_rate_std = numpy.std(all_venue_top2_rate_list) if all_venue_top2_rate_list else None
     # all_venue_top3_rate
-    all_venue_top3_rate_list = [racer.all_venue_top3_rate for racer in racer_list if racer.all_venue_top3_rate is not None]
+    all_venue_top3_rate_list = [
+        racer.all_venue_top3_rate for racer in racer_list if racer.all_venue_top3_rate is not None
+    ]
     all_venue_top3_rate_mean = numpy.mean(all_venue_top3_rate_list) if all_venue_top3_rate_list else None
     all_venue_top3_rate_std = numpy.std(all_venue_top3_rate_list) if all_venue_top3_rate_list else None
     # this_venue_win_rate
-    this_venue_win_rate_list = [racer.this_venue_win_rate for racer in racer_list if racer.this_venue_win_rate is not None]
+    this_venue_win_rate_list = [
+        racer.this_venue_win_rate for racer in racer_list if racer.this_venue_win_rate is not None
+    ]
     this_venue_win_rate_mean = numpy.mean(this_venue_win_rate_list) if this_venue_win_rate_list else None
     this_venue_win_rate_std = numpy.std(this_venue_win_rate_list) if this_venue_win_rate_list else None
     # this_venue_top2_rate
-    this_venue_top2_rate_list = [racer.this_venue_top2_rate for racer in racer_list if racer.this_venue_top2_rate is not None]
+    this_venue_top2_rate_list = [
+        racer.this_venue_top2_rate for racer in racer_list if racer.this_venue_top2_rate is not None
+    ]
     this_venue_top2_rate_mean = numpy.mean(this_venue_top2_rate_list) if this_venue_top2_rate_list else None
     this_venue_top2_rate_std = numpy.std(this_venue_top2_rate_list) if this_venue_top2_rate_list else None
     # this_venue_top3_rate
-    this_venue_top3_rate_list = [racer.this_venue_top3_rate for racer in racer_list if racer.this_venue_top3_rate is not None]
+    this_venue_top3_rate_list = [
+        racer.this_venue_top3_rate for racer in racer_list if racer.this_venue_top3_rate is not None
+    ]
     this_venue_top3_rate_mean = numpy.mean(this_venue_top3_rate_list) if this_venue_top3_rate_list else None
     this_venue_top3_rate_std = numpy.std(this_venue_top3_rate_list) if this_venue_top3_rate_list else None
     # motor_top2_rate
@@ -1166,57 +1252,142 @@ def calculate_z_scores(race_id: int):
     boat_top3_rate_mean = numpy.mean(boat_top3_rate_list) if boat_top3_rate_list else None
     boat_top3_rate_std = numpy.std(boat_top3_rate_list) if boat_top3_rate_list else None
     # before_info_start_timing_abs
-    before_info_start_timing_abs_list = [racer.before_info_start_timing_abs for racer in racer_list if racer.before_info_start_timing_abs is not None]
-    before_info_start_timing_abs_mean = numpy.mean(before_info_start_timing_abs_list) if before_info_start_timing_abs_list else None
-    before_info_start_timing_abs_std = numpy.std(before_info_start_timing_abs_list) if before_info_start_timing_abs_list else None
+    before_info_start_timing_abs_list = [
+        racer.before_info_start_timing_abs for racer in racer_list if racer.before_info_start_timing_abs is not None
+    ]
+    before_info_start_timing_abs_mean = (
+        numpy.mean(before_info_start_timing_abs_list) if before_info_start_timing_abs_list else None
+    )
+    before_info_start_timing_abs_std = (
+        numpy.std(before_info_start_timing_abs_list) if before_info_start_timing_abs_list else None
+    )
     # before_info_display_time
-    before_info_display_time_list = [racer.before_info_display_time for racer in racer_list if racer.before_info_display_time is not None]
+    before_info_display_time_list = [
+        racer.before_info_display_time for racer in racer_list if racer.before_info_display_time is not None
+    ]
     before_info_display_time_mean = numpy.mean(before_info_display_time_list) if before_info_display_time_list else None
     before_info_display_time_std = numpy.std(before_info_display_time_list) if before_info_display_time_list else None
 
     for racer in racer_list:
         # average_start_timing
-        if racer.average_start_timing is not None and average_start_timing_mean is not None and average_start_timing_std is not None:
-            racer.average_start_timing_z_score = (average_start_timing_mean - racer.average_start_timing) / average_start_timing_std if average_start_timing_std > 0 else 0.0
+        if (
+            racer.average_start_timing is not None
+            and average_start_timing_mean is not None
+            and average_start_timing_std is not None
+        ):
+            racer.average_start_timing_z_score = (
+                (average_start_timing_mean - racer.average_start_timing) / average_start_timing_std
+                if average_start_timing_std > 0
+                else 0.0
+            )
         # all_venue_win_rate
-        if racer.all_venue_win_rate is not None and all_venue_win_rate_mean is not None and all_venue_win_rate_std is not None:
-            racer.all_venue_win_rate_z_score = (racer.all_venue_win_rate - all_venue_win_rate_mean) / all_venue_win_rate_std if all_venue_win_rate_std > 0 else 0.0
+        if (
+            racer.all_venue_win_rate is not None
+            and all_venue_win_rate_mean is not None
+            and all_venue_win_rate_std is not None
+        ):
+            racer.all_venue_win_rate_z_score = (
+                (racer.all_venue_win_rate - all_venue_win_rate_mean) / all_venue_win_rate_std
+                if all_venue_win_rate_std > 0
+                else 0.0
+            )
         # all_venue_top2_rate
-        if racer.all_venue_top2_rate is not None and all_venue_top2_rate_mean is not None and all_venue_top2_rate_std is not None:
-            racer.all_venue_top2_rate_z_score = (racer.all_venue_top2_rate - all_venue_top2_rate_mean) / all_venue_top2_rate_std if all_venue_top2_rate_std > 0 else 0.0
+        if (
+            racer.all_venue_top2_rate is not None
+            and all_venue_top2_rate_mean is not None
+            and all_venue_top2_rate_std is not None
+        ):
+            racer.all_venue_top2_rate_z_score = (
+                (racer.all_venue_top2_rate - all_venue_top2_rate_mean) / all_venue_top2_rate_std
+                if all_venue_top2_rate_std > 0
+                else 0.0
+            )
         # all_venue_top3_rate
-        if racer.all_venue_top3_rate is not None and all_venue_top3_rate_mean is not None and all_venue_top3_rate_std is not None:
-            racer.all_venue_top3_rate_z_score = (racer.all_venue_top3_rate - all_venue_top3_rate_mean) / all_venue_top3_rate_std if all_venue_top3_rate_std > 0 else 0.0
+        if (
+            racer.all_venue_top3_rate is not None
+            and all_venue_top3_rate_mean is not None
+            and all_venue_top3_rate_std is not None
+        ):
+            racer.all_venue_top3_rate_z_score = (
+                (racer.all_venue_top3_rate - all_venue_top3_rate_mean) / all_venue_top3_rate_std
+                if all_venue_top3_rate_std > 0
+                else 0.0
+            )
         # this_venue_win_rate
-        if racer.this_venue_win_rate is not None and this_venue_win_rate_mean is not None and this_venue_win_rate_std is not None:
-            racer.this_venue_win_rate_z_score = (racer.this_venue_win_rate - this_venue_win_rate_mean) / this_venue_win_rate_std if this_venue_win_rate_std > 0 else 0.0
+        if (
+            racer.this_venue_win_rate is not None
+            and this_venue_win_rate_mean is not None
+            and this_venue_win_rate_std is not None
+        ):
+            racer.this_venue_win_rate_z_score = (
+                (racer.this_venue_win_rate - this_venue_win_rate_mean) / this_venue_win_rate_std
+                if this_venue_win_rate_std > 0
+                else 0.0
+            )
         # this_venue_top2_rate
-        if racer.this_venue_top2_rate is not None and this_venue_top2_rate_mean is not None and this_venue_top2_rate_std is not None:
-            racer.this_venue_top2_rate_z_score = (racer.this_venue_top2_rate - this_venue_top2_rate_mean) / this_venue_top2_rate_std if this_venue_top2_rate_std > 0 else 0.0
+        if (
+            racer.this_venue_top2_rate is not None
+            and this_venue_top2_rate_mean is not None
+            and this_venue_top2_rate_std is not None
+        ):
+            racer.this_venue_top2_rate_z_score = (
+                (racer.this_venue_top2_rate - this_venue_top2_rate_mean) / this_venue_top2_rate_std
+                if this_venue_top2_rate_std > 0
+                else 0.0
+            )
         # this_venue_top3_rate
-        if racer.this_venue_top3_rate is not None and this_venue_top3_rate_mean is not None and this_venue_top3_rate_std is not None:
-            racer.this_venue_top3_rate_z_score = (racer.this_venue_top3_rate - this_venue_top3_rate_mean) / this_venue_top3_rate_std if this_venue_top3_rate_std > 0 else 0.0
+        if (
+            racer.this_venue_top3_rate is not None
+            and this_venue_top3_rate_mean is not None
+            and this_venue_top3_rate_std is not None
+        ):
+            racer.this_venue_top3_rate_z_score = (
+                (racer.this_venue_top3_rate - this_venue_top3_rate_mean) / this_venue_top3_rate_std
+                if this_venue_top3_rate_std > 0
+                else 0.0
+            )
         # motor_top2_rate
         if racer.motor_top2_rate is not None and motor_top2_rate_mean is not None and motor_top2_rate_std is not None:
-            racer.motor_top2_rate_z_score = (racer.motor_top2_rate - motor_top2_rate_mean) / motor_top2_rate_std if motor_top2_rate_std > 0 else 0.0
+            racer.motor_top2_rate_z_score = (
+                (racer.motor_top2_rate - motor_top2_rate_mean) / motor_top2_rate_std if motor_top2_rate_std > 0 else 0.0
+            )
         # motor_top3_rate
         if racer.motor_top3_rate is not None and motor_top3_rate_mean is not None and motor_top3_rate_std is not None:
-            racer.motor_top3_rate_z_score = (racer.motor_top3_rate - motor_top3_rate_mean) / motor_top3_rate_std if motor_top3_rate_std > 0 else 0.0
+            racer.motor_top3_rate_z_score = (
+                (racer.motor_top3_rate - motor_top3_rate_mean) / motor_top3_rate_std if motor_top3_rate_std > 0 else 0.0
+            )
         # boat_top2_rate
         if racer.boat_top2_rate is not None and boat_top2_rate_mean is not None and boat_top2_rate_std is not None:
-            racer.boat_top2_rate_z_score = (racer.boat_top2_rate - boat_top2_rate_mean) / boat_top2_rate_std if boat_top2_rate_std > 0 else 0.0
+            racer.boat_top2_rate_z_score = (
+                (racer.boat_top2_rate - boat_top2_rate_mean) / boat_top2_rate_std if boat_top2_rate_std > 0 else 0.0
+            )
         # boat_top3_rate
         if racer.boat_top3_rate is not None and boat_top3_rate_mean is not None and boat_top3_rate_std is not None:
-            racer.boat_top3_rate_z_score = (racer.boat_top3_rate - boat_top3_rate_mean) / boat_top3_rate_std if boat_top3_rate_std > 0 else 0.0
+            racer.boat_top3_rate_z_score = (
+                (racer.boat_top3_rate - boat_top3_rate_mean) / boat_top3_rate_std if boat_top3_rate_std > 0 else 0.0
+            )
         # before_info_start_timing_abs
-        if racer.before_info_start_timing_abs is not None and before_info_start_timing_abs_mean is not None and before_info_start_timing_abs_std is not None:
+        if (
+            racer.before_info_start_timing_abs is not None
+            and before_info_start_timing_abs_mean is not None
+            and before_info_start_timing_abs_std is not None
+        ):
             racer.before_info_start_timing_abs_z_score = (
-                (before_info_start_timing_abs_mean - racer.before_info_start_timing_abs) / before_info_start_timing_abs_std if before_info_start_timing_abs_std > 0 else 0.0
+                (before_info_start_timing_abs_mean - racer.before_info_start_timing_abs)
+                / before_info_start_timing_abs_std
+                if before_info_start_timing_abs_std > 0
+                else 0.0
             )
         # before_info_display_time
-        if racer.before_info_display_time is not None and before_info_display_time_mean is not None and before_info_display_time_std is not None:
+        if (
+            racer.before_info_display_time is not None
+            and before_info_display_time_mean is not None
+            and before_info_display_time_std is not None
+        ):
             racer.before_info_display_time_z_score = (
-                (before_info_display_time_mean - racer.before_info_display_time) / before_info_display_time_std if before_info_display_time_std > 0 else 0.0
+                (before_info_display_time_mean - racer.before_info_display_time) / before_info_display_time_std
+                if before_info_display_time_std > 0
+                else 0.0
             )
 
 
@@ -1538,7 +1709,9 @@ def output_predict_race_data(race: Race) -> bool:
     row.append(datetime.strptime(str(race.date), "%Y%m%d").date().weekday())
     row.append(race.period_progress_rate)
     row.append(race.venue)
-    venue_stat = SESSION.query(VenueStat).filter(VenueStat.venue == race.venue, VenueStat.year == race.date // 10000).one()
+    venue_stat = (
+        SESSION.query(VenueStat).filter(VenueStat.venue == race.venue, VenueStat.year == race.date // 10000).one()
+    )
     row.append(venue_stat.normal_entry_course1_1st_rate)
     row.append(venue_stat.normal_entry_course1_2nd_rate)
     row.append(venue_stat.normal_entry_course1_3rd_rate)
@@ -1776,7 +1949,10 @@ def output_predict_race_data(race: Race) -> bool:
         racer_list[4].before_info_start_timing_abs_z_score,
         racer_list[5].before_info_start_timing_abs_z_score,
     ]
-    row.append(racer_list[0].before_info_start_timing_abs_z_score - numpy.mean(boat23456_before_info_start_timing_abs_z_score_list))
+    row.append(
+        racer_list[0].before_info_start_timing_abs_z_score
+        - numpy.mean(boat23456_before_info_start_timing_abs_z_score_list)
+    )
 
     # before_info_display_time
     row.append(numpy.std([racer.before_info_display_time for racer in racer_list]))
@@ -1803,7 +1979,9 @@ def output_predict_race_data(race: Race) -> bool:
         racer_list[4].before_info_display_time_z_score,
         racer_list[5].before_info_display_time_z_score,
     ]
-    row.append(racer_list[0].before_info_display_time_z_score - numpy.mean(boat23456_before_info_display_time_z_score_list))
+    row.append(
+        racer_list[0].before_info_display_time_z_score - numpy.mean(boat23456_before_info_display_time_z_score_list)
+    )
 
     # course_1st_rate
     row.append(round(course_1st_rate_list[0] - course_1st_rate_list[1], 2))
@@ -1904,7 +2082,9 @@ def predict(race_id: int):
 
                 deltas_list = []
                 for seed in range(SEED_COUNT):
-                    model = lightgbm.Booster(model_file=os.path.join(os.getcwd(), "models", f"{race.date // 10000}_{seed + 1:02d}.txt"))
+                    model = lightgbm.Booster(
+                        model_file=os.path.join(os.getcwd(), "models", f"{race.date // 10000}_{seed + 1:02d}.txt")
+                    )
                     [deltas] = model.predict(predict_df, raw_score=True)
                     deltas_list.append(deltas)
 
@@ -1941,7 +2121,9 @@ def predict(race_id: int):
 
                 deadline = datetime.strptime(race.deadline, "%H:%M")
                 deadline_before_55_seconds = deadline - timedelta(seconds=55)
-                schedule.every().day.at(deadline_before_55_seconds.strftime("%H:%M:%S")).do(run_thread, partial(bet, race_id=race_id))
+                schedule.every().day.at(deadline_before_55_seconds.strftime("%H:%M:%S")).do(
+                    run_thread, partial(bet, race_id=race_id)
+                )
     except Exception:
         _logger.exception()
         SESSION.rollback()
@@ -1984,7 +2166,9 @@ def bet(race_id: int):
         jyo_element = wait.until(EC.element_to_be_clickable((By.ID, f"jyo{race.venue:02d}")))
         if jyo_element.get_attribute("class") == "border t":
             jyo_element.click()
-            sel_race_no_element = wait.until(EC.presence_of_element_located((By.ID, f"selRaceNo{str(race.race_number).zfill(2)}")))
+            sel_race_no_element = wait.until(
+                EC.presence_of_element_located((By.ID, f"selRaceNo{str(race.race_number).zfill(2)}"))
+            )
             if "current" in sel_race_no_element.get_attribute("class"):
                 url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
                 try:
@@ -2030,14 +2214,22 @@ def bet(race_id: int):
                 )
                 if len(ticket_list) == 120:
                     before_deadline_odds_list = [ticket.before_deadline_odds for ticket in ticket_list]
-                    sum_before_deadline_odds_inverse = sum(1.0 / before_deadline_odds for before_deadline_odds in before_deadline_odds_list)
+                    sum_before_deadline_odds_inverse = sum(
+                        1.0 / before_deadline_odds for before_deadline_odds in before_deadline_odds_list
+                    )
                     sum_exp_score = 0.0
                     for ticket in ticket_list:
-                        ticket.before_deadline_odds_market_share = (1.0 / ticket.before_deadline_odds) / sum_before_deadline_odds_inverse
+                        ticket.before_deadline_odds_market_share = (
+                            1.0 / ticket.before_deadline_odds
+                        ) / sum_before_deadline_odds_inverse
                         sum_exp_score += ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
                     for ticket in ticket_list:
-                        ticket.before_deadline_odds_probability = (ticket.before_deadline_odds_market_share * math.exp(ticket.delta)) / sum_exp_score
-                        ticket.before_deadline_odds_expected_value = ticket.before_deadline_odds_probability * ticket.before_deadline_odds
+                        ticket.before_deadline_odds_probability = (
+                            ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
+                        ) / sum_exp_score
+                        ticket.before_deadline_odds_expected_value = (
+                            ticket.before_deadline_odds_probability * ticket.before_deadline_odds
+                        )
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
@@ -2081,7 +2273,9 @@ def bet(race_id: int):
                         wait.until(EC.element_to_be_clickable((By.ID, "regAmountBtn"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, "amount"))).clear()
                     wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "btnSubmit"))).click()
-                    total_bet_amount = wait.until(EC.visibility_of_element_located((By.ID, "betconfTotalBetAmount"))).text
+                    total_bet_amount = wait.until(
+                        EC.visibility_of_element_located((By.ID, "betconfTotalBetAmount"))
+                    ).text
                     wait.until(EC.element_to_be_clickable((By.ID, "amount"))).send_keys(total_bet_amount)
                     wait.until(EC.element_to_be_clickable((By.ID, "pass"))).send_keys(BET_PASSWORD)
                     wait.until(EC.element_to_be_clickable((By.ID, "submitBet"))).click()
@@ -2176,7 +2370,11 @@ def save_result(race_id):
                         except Exception:
                             pass
                         if result is not None and boat_number is not None:
-                            racer = SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one()
+                            racer = (
+                                SESSION.query(Racer)
+                                .filter(Racer.race_id == race_id, Racer.boat_number == boat_number)
+                                .one()
+                            )
                             racer.result = result
                             racer.race_time = race_time
                     break
@@ -2338,13 +2536,19 @@ def daily():
             SESSION.rollback()
             raise
 
-        race_list = SESSION.query(Race).filter(Race.date == int(today.strftime("%Y%m%d"))).order_by(Race.deadline.asc()).all()
+        race_list = (
+            SESSION.query(Race).filter(Race.date == int(today.strftime("%Y%m%d"))).order_by(Race.deadline.asc()).all()
+        )
         for race in race_list:
             deadline = datetime.strptime(race.deadline, "%H:%M")
             deadline_before_5_minutes = deadline - timedelta(minutes=5)
-            schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(run_thread, partial(predict, race_id=race.id))
+            schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(
+                run_thread, partial(predict, race_id=race.id)
+            )
             deadline_after_55_minutes = deadline + timedelta(minutes=55)
-            schedule.every().day.at(deadline_after_55_minutes.strftime("%H:%M")).do(run_thread, partial(save_result, race_id=race.id))
+            schedule.every().day.at(deadline_after_55_minutes.strftime("%H:%M")).do(
+                run_thread, partial(save_result, race_id=race.id)
+            )
     except Exception:
         _logger.exception()
         SESSION.rollback()
@@ -2413,7 +2617,9 @@ def main():
         atTime=time(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone(timedelta(hours=+9), "JST")),
     )
     handler.setLevel(logging.INFO)
-    handler.setFormatter(logging.Formatter(fmt="[{asctime}] [{levelname:<8}]: {message}", datefmt="%Y-%m-%d %H:%M:%S", style="{"))
+    handler.setFormatter(
+        logging.Formatter(fmt="[{asctime}] [{levelname:<8}]: {message}", datefmt="%Y-%m-%d %H:%M:%S", style="{")
+    )
     root_logger.addHandler(handler)
 
     schedule.every().day.at(DAILY_TIME).do(daily)

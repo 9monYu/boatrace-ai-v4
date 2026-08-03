@@ -104,39 +104,75 @@ def main():
                 venue_stat.normal_entry_course1_1st_count = normal_entry_course1_1st_count
                 venue_stat.normal_entry_course1_2nd_count = normal_entry_course1_2nd_count
                 venue_stat.normal_entry_course1_3rd_count = normal_entry_course1_3rd_count
-                venue_stat.normal_entry_course1_1st_rate = round((normal_entry_course1_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course1_2nd_rate = round((normal_entry_course1_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course1_3rd_rate = round((normal_entry_course1_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course1_1st_rate = round(
+                    (normal_entry_course1_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course1_2nd_rate = round(
+                    (normal_entry_course1_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course1_3rd_rate = round(
+                    (normal_entry_course1_3rd_count / normal_entry_race_count) * 100, 2
+                )
                 venue_stat.normal_entry_course2_1st_count = normal_entry_course2_1st_count
                 venue_stat.normal_entry_course2_2nd_count = normal_entry_course2_2nd_count
                 venue_stat.normal_entry_course2_3rd_count = normal_entry_course2_3rd_count
-                venue_stat.normal_entry_course2_1st_rate = round((normal_entry_course2_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course2_2nd_rate = round((normal_entry_course2_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course2_3rd_rate = round((normal_entry_course2_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course2_1st_rate = round(
+                    (normal_entry_course2_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course2_2nd_rate = round(
+                    (normal_entry_course2_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course2_3rd_rate = round(
+                    (normal_entry_course2_3rd_count / normal_entry_race_count) * 100, 2
+                )
                 venue_stat.normal_entry_course3_1st_count = normal_entry_course3_1st_count
                 venue_stat.normal_entry_course3_2nd_count = normal_entry_course3_2nd_count
                 venue_stat.normal_entry_course3_3rd_count = normal_entry_course3_3rd_count
-                venue_stat.normal_entry_course3_1st_rate = round((normal_entry_course3_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course3_2nd_rate = round((normal_entry_course3_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course3_3rd_rate = round((normal_entry_course3_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course3_1st_rate = round(
+                    (normal_entry_course3_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course3_2nd_rate = round(
+                    (normal_entry_course3_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course3_3rd_rate = round(
+                    (normal_entry_course3_3rd_count / normal_entry_race_count) * 100, 2
+                )
                 venue_stat.normal_entry_course4_1st_count = normal_entry_course4_1st_count
                 venue_stat.normal_entry_course4_2nd_count = normal_entry_course4_2nd_count
                 venue_stat.normal_entry_course4_3rd_count = normal_entry_course4_3rd_count
-                venue_stat.normal_entry_course4_1st_rate = round((normal_entry_course4_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course4_2nd_rate = round((normal_entry_course4_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course4_3rd_rate = round((normal_entry_course4_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course4_1st_rate = round(
+                    (normal_entry_course4_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course4_2nd_rate = round(
+                    (normal_entry_course4_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course4_3rd_rate = round(
+                    (normal_entry_course4_3rd_count / normal_entry_race_count) * 100, 2
+                )
                 venue_stat.normal_entry_course5_1st_count = normal_entry_course5_1st_count
                 venue_stat.normal_entry_course5_2nd_count = normal_entry_course5_2nd_count
                 venue_stat.normal_entry_course5_3rd_count = normal_entry_course5_3rd_count
-                venue_stat.normal_entry_course5_1st_rate = round((normal_entry_course5_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course5_2nd_rate = round((normal_entry_course5_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course5_3rd_rate = round((normal_entry_course5_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course5_1st_rate = round(
+                    (normal_entry_course5_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course5_2nd_rate = round(
+                    (normal_entry_course5_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course5_3rd_rate = round(
+                    (normal_entry_course5_3rd_count / normal_entry_race_count) * 100, 2
+                )
                 venue_stat.normal_entry_course6_1st_count = normal_entry_course6_1st_count
                 venue_stat.normal_entry_course6_2nd_count = normal_entry_course6_2nd_count
                 venue_stat.normal_entry_course6_3rd_count = normal_entry_course6_3rd_count
-                venue_stat.normal_entry_course6_1st_rate = round((normal_entry_course6_1st_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course6_2nd_rate = round((normal_entry_course6_2nd_count / normal_entry_race_count) * 100, 2)
-                venue_stat.normal_entry_course6_3rd_rate = round((normal_entry_course6_3rd_count / normal_entry_race_count) * 100, 2)
+                venue_stat.normal_entry_course6_1st_rate = round(
+                    (normal_entry_course6_1st_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course6_2nd_rate = round(
+                    (normal_entry_course6_2nd_count / normal_entry_race_count) * 100, 2
+                )
+                venue_stat.normal_entry_course6_3rd_rate = round(
+                    (normal_entry_course6_3rd_count / normal_entry_race_count) * 100, 2
+                )
             else:
                 venue_stat_list.append(
                     VenueStat(
@@ -146,39 +182,75 @@ def main():
                         normal_entry_course1_1st_count=normal_entry_course1_1st_count,
                         normal_entry_course1_2nd_count=normal_entry_course1_2nd_count,
                         normal_entry_course1_3rd_count=normal_entry_course1_3rd_count,
-                        normal_entry_course1_1st_rate=round((normal_entry_course1_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course1_2nd_rate=round((normal_entry_course1_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course1_3rd_rate=round((normal_entry_course1_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course1_1st_rate=round(
+                            (normal_entry_course1_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course1_2nd_rate=round(
+                            (normal_entry_course1_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course1_3rd_rate=round(
+                            (normal_entry_course1_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                         normal_entry_course2_1st_count=normal_entry_course2_1st_count,
                         normal_entry_course2_2nd_count=normal_entry_course2_2nd_count,
                         normal_entry_course2_3rd_count=normal_entry_course2_3rd_count,
-                        normal_entry_course2_1st_rate=round((normal_entry_course2_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course2_2nd_rate=round((normal_entry_course2_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course2_3rd_rate=round((normal_entry_course2_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course2_1st_rate=round(
+                            (normal_entry_course2_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course2_2nd_rate=round(
+                            (normal_entry_course2_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course2_3rd_rate=round(
+                            (normal_entry_course2_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                         normal_entry_course3_1st_count=normal_entry_course3_1st_count,
                         normal_entry_course3_2nd_count=normal_entry_course3_2nd_count,
                         normal_entry_course3_3rd_count=normal_entry_course3_3rd_count,
-                        normal_entry_course3_1st_rate=round((normal_entry_course3_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course3_2nd_rate=round((normal_entry_course3_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course3_3rd_rate=round((normal_entry_course3_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course3_1st_rate=round(
+                            (normal_entry_course3_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course3_2nd_rate=round(
+                            (normal_entry_course3_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course3_3rd_rate=round(
+                            (normal_entry_course3_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                         normal_entry_course4_1st_count=normal_entry_course4_1st_count,
                         normal_entry_course4_2nd_count=normal_entry_course4_2nd_count,
                         normal_entry_course4_3rd_count=normal_entry_course4_3rd_count,
-                        normal_entry_course4_1st_rate=round((normal_entry_course4_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course4_2nd_rate=round((normal_entry_course4_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course4_3rd_rate=round((normal_entry_course4_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course4_1st_rate=round(
+                            (normal_entry_course4_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course4_2nd_rate=round(
+                            (normal_entry_course4_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course4_3rd_rate=round(
+                            (normal_entry_course4_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                         normal_entry_course5_1st_count=normal_entry_course5_1st_count,
                         normal_entry_course5_2nd_count=normal_entry_course5_2nd_count,
                         normal_entry_course5_3rd_count=normal_entry_course5_3rd_count,
-                        normal_entry_course5_1st_rate=round((normal_entry_course5_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course5_2nd_rate=round((normal_entry_course5_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course5_3rd_rate=round((normal_entry_course5_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course5_1st_rate=round(
+                            (normal_entry_course5_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course5_2nd_rate=round(
+                            (normal_entry_course5_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course5_3rd_rate=round(
+                            (normal_entry_course5_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                         normal_entry_course6_1st_count=normal_entry_course6_1st_count,
                         normal_entry_course6_2nd_count=normal_entry_course6_2nd_count,
                         normal_entry_course6_3rd_count=normal_entry_course6_3rd_count,
-                        normal_entry_course6_1st_rate=round((normal_entry_course6_1st_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course6_2nd_rate=round((normal_entry_course6_2nd_count / normal_entry_race_count) * 100, 2),
-                        normal_entry_course6_3rd_rate=round((normal_entry_course6_3rd_count / normal_entry_race_count) * 100, 2),
+                        normal_entry_course6_1st_rate=round(
+                            (normal_entry_course6_1st_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course6_2nd_rate=round(
+                            (normal_entry_course6_2nd_count / normal_entry_race_count) * 100, 2
+                        ),
+                        normal_entry_course6_3rd_rate=round(
+                            (normal_entry_course6_3rd_count / normal_entry_race_count) * 100, 2
+                        ),
                     )
                 )
         SESSION.add_all(venue_stat_list)

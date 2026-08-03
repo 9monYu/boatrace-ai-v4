@@ -24,7 +24,9 @@ def main():
     except ValueError:
         return
 
-    with open(os.path.join(os.getcwd(), "temp", f"simulation_{args.start}_{args.end}.csv"), "w", newline="", encoding="utf-8") as f:
+    with open(
+        os.path.join(os.getcwd(), "temp", f"simulation_{args.start}_{args.end}.csv"), "w", newline="", encoding="utf-8"
+    ) as f:
         writer = csv.writer(f, delimiter="\t")
         race_list = (
             SESSION.query(Race)
