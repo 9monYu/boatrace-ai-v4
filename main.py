@@ -49,7 +49,8 @@ from models import Bet, PeriodStat, Race, Racer, Ticket, VenueStat
 
 _logger = logging.getLogger(__name__)
 
-DAILY_TIME = "07:00"
+DAILY_TIME = "04:00"
+CHARGE_TIME = "08:00"
 
 
 def run_thread(target):
@@ -2125,7 +2126,7 @@ def predict(race_id: int):
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
-        _logger.exception()
+        _logger.exception("")
         SESSION.rollback()
     finally:
         SESSION.remove()
@@ -2147,7 +2148,6 @@ def bet(race_id: int):
         },
     )
 
-    driver = None
     try:
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
@@ -2294,17 +2294,16 @@ def bet(race_id: int):
                     try:
                         SESSION.commit()
                     except SQLAlchemyError:
-                        _logger.exception()
+                        _logger.exception("")
                         SESSION.rollback()
     except Exception:
-        _logger.exception()
+        _logger.exception("")
         SESSION.rollback()
     finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except Exception:
-                _logger.exception()
+        try:
+            driver.quit()
+        except Exception:
+            _logger.exception("")
         SESSION.remove()
 
 
@@ -2381,18 +2380,81 @@ def save_result(race_id):
         try:
             SESSION.commit()
         except SQLAlchemyError:
-            _logger.exception()
+            _logger.exception("")
             SESSION.rollback()
     except Exception:
-        _logger.exception()
+        _logger.exception("")
         SESSION.rollback()
     finally:
         SESSION.remove()
 
 
+def charge():
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    chrome_options.add_experimental_option(
+        "prefs",
+        {
+            "profile.managed_default_content_settings.images": 2,
+            "credentials_enable_service": False,
+            "download.default_directory": os.path.join(os.getcwd(), "temp"),
+            "download_bubble.partial_view_enabled": False,
+        },
+    )
+
+    try:
+        driver = webdriver.Chrome(options=chrome_options)
+        wait = WebDriverWait(driver=driver, timeout=20)
+
+        driver.get("https://login.paypay-bank.co.jp/")
+        wait.until(EC.element_to_be_clickable((By.ID, "idTenNo"))).send_keys(PAYPAY_BANK_STORE_NUMBER)
+        wait.until(EC.element_to_be_clickable((By.ID, "idKozaNo"))).send_keys(PAYPAY_BANK_ACCOUNT_NUMBER)
+        wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
+        wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
+        try:
+            wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance")))
+        except TimeoutException:
+            wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
+            wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
+        balance_text = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance"))).text
+        balance = int(balance_text.replace(",", "").replace("円", ""))
+        wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "p.logoutWrap > a.logout"))).click()
+        wait.until(EC.alert_is_present()).accept()
+        time_module.sleep(10)
+        if balance > 1000:
+            driver.get("https://www.boatrace.jp/owpc/pc/login")
+            wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
+            wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
+            wait.until(EC.element_to_be_clickable((By.ID, "in_PassWord"))).send_keys(AUTH_PASSWORD)
+            wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
+            driver.switch_to.window(driver.window_handles[1])
+            try:
+                wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+                wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+            except Exception:
+                pass
+            wait.until(EC.element_to_be_clickable((By.ID, "gnavi01"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "charge"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "chargeInstructAmt"))).send_keys(balance // 1000)
+            wait.until(EC.element_to_be_clickable((By.ID, "chargeBetPassword"))).send_keys(BET_PASSWORD)
+            wait.until(EC.element_to_be_clickable((By.ID, "executeCharge"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
+            time_module.sleep(10)
+    except Exception:
+        _logger.exception("")
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            _logger.exception("")
+
+
 def daily():
     schedule.clear()
     schedule.every().day.at(DAILY_TIME).do(daily)
+    schedule.every().day.at(CHARGE_TIME).do(charge)
 
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -2414,10 +2476,9 @@ def daily():
         },
     )
 
-    driver = None
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=10)
+        wait = WebDriverWait(driver=driver, timeout=20)
 
         driver.get("https://www1.mbrace.or.jp/od2/B/dindex.html")
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
@@ -2451,14 +2512,13 @@ def daily():
         download_button.click()
         time_module.sleep(10)
     except Exception:
-        _logger.exception()
+        _logger.exception("")
         return
     finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except Exception:
-                _logger.exception()
+        try:
+            driver.quit()
+        except Exception:
+            _logger.exception("")
 
     try:
         for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
@@ -2550,60 +2610,11 @@ def daily():
                 run_thread, partial(save_result, race_id=race.id)
             )
     except Exception:
-        _logger.exception()
+        _logger.exception("")
         SESSION.rollback()
         return
     finally:
         SESSION.remove()
-
-    driver = None
-    try:
-        driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=10)
-
-        driver.get("https://login.paypay-bank.co.jp/")
-        wait.until(EC.element_to_be_clickable((By.ID, "idTenNo"))).send_keys(PAYPAY_BANK_STORE_NUMBER)
-        wait.until(EC.element_to_be_clickable((By.ID, "idKozaNo"))).send_keys(PAYPAY_BANK_ACCOUNT_NUMBER)
-        wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
-        wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
-        try:
-            wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance")))
-        except TimeoutException:
-            wait.until(EC.element_to_be_clickable((By.ID, "idPw"))).send_keys(PAYPAY_BANK_PASSWORD)
-            wait.until(EC.element_to_be_clickable((By.NAME, "login"))).click()
-        balance_text = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "balance"))).text
-        balance = int(balance_text.replace(",", "").replace("円", ""))
-        wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "p.logoutWrap > a.logout"))).click()
-        wait.until(EC.alert_is_present()).accept()
-        time_module.sleep(10)
-        if balance > 1000:
-            driver.get("https://www.boatrace.jp/owpc/pc/login")
-            wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
-            wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
-            wait.until(EC.element_to_be_clickable((By.ID, "in_PassWord"))).send_keys(AUTH_PASSWORD)
-            wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
-            wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
-            driver.switch_to.window(driver.window_handles[1])
-            try:
-                wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
-                wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
-            except Exception:
-                pass
-            wait.until(EC.element_to_be_clickable((By.ID, "gnavi01"))).click()
-            wait.until(EC.element_to_be_clickable((By.ID, "charge"))).click()
-            wait.until(EC.element_to_be_clickable((By.ID, "chargeInstructAmt"))).send_keys(balance // 1000)
-            wait.until(EC.element_to_be_clickable((By.ID, "chargeBetPassword"))).send_keys(BET_PASSWORD)
-            wait.until(EC.element_to_be_clickable((By.ID, "executeCharge"))).click()
-            wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
-            time_module.sleep(10)
-    except Exception:
-        _logger.exception()
-    finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except Exception:
-                _logger.exception()
 
 
 def main():
