@@ -372,7 +372,6 @@ def main():
                     race = SESSION.query(Race).filter(Race.id == race_id).one()
                     deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
                     sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
-                    SESSION.query(Ticket).filter(Ticket.race_id == race_id).delete()
                     for index in range(120):
                         is_hit = (
                             1
@@ -385,17 +384,32 @@ def main():
                         deadline_odds_market_share = (
                             (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
                         )
-                        ticket_list.append(
-                            Ticket(
-                                race_id=race_id,
-                                first=TRIFECTA_LIST[index][0],
-                                second=TRIFECTA_LIST[index][1],
-                                third=TRIFECTA_LIST[index][2],
-                                is_hit=is_hit,
-                                deadline_odds=deadline_odds,
-                                deadline_odds_market_share=deadline_odds_market_share,
+                        ticket = (
+                            SESSION.query(Ticket)
+                            .filter(
+                                Ticket.race_id == race_id,
+                                Ticket.first == TRIFECTA_LIST[index][0],
+                                Ticket.second == TRIFECTA_LIST[index][1],
+                                Ticket.third == TRIFECTA_LIST[index][2],
                             )
+                            .one_or_none()
                         )
+                        if ticket is not None:
+                            ticket.is_hit = is_hit
+                            ticket.deadline_odds = deadline_odds
+                            ticket.deadline_odds_market_share = deadline_odds_market_share
+                        else:
+                            ticket_list.append(
+                                Ticket(
+                                    race_id=race_id,
+                                    first=TRIFECTA_LIST[index][0],
+                                    second=TRIFECTA_LIST[index][1],
+                                    third=TRIFECTA_LIST[index][2],
+                                    is_hit=is_hit,
+                                    deadline_odds=deadline_odds,
+                                    deadline_odds_market_share=deadline_odds_market_share,
+                                )
+                            )
             SESSION.add_all(ticket_list)
             SESSION.commit()
 

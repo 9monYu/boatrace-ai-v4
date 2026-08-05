@@ -12,7 +12,7 @@ def main():
     for file in tqdm(os.listdir(period_stats_directory_path)):
         if file.startswith("fan") and (file.endswith(".txt") or file.endswith(".TXT")):
             with open(os.path.join(period_stats_directory_path, file), "r", encoding="CP932") as f:
-                for line in f.readlines():
+                for line in f:
                     if line == "\n":
                         continue
                     racer_number = line[0:4]

@@ -75,22 +75,32 @@ def main():
         except Exception:
             pass
 
-        is_last_day = 0
-        if (
-            beautifulsoup.find("li", class_="is-active2")
-            .find("span", class_="tab2_inner")
-            .find("span")
-            .get_text(strip=True)
-            == "最終日"
-        ):
-            is_last_day = 1
+        is_last_day = None
+        try:
+            if (
+                beautifulsoup.find("li", class_="is-active2")
+                .find("span", class_="tab2_inner")
+                .find("span")
+                .get_text(strip=True)
+                == "最終日"
+            ):
+                is_last_day = 1
+            else:
+                is_last_day = 0
+        except Exception:
+            pass
 
-        has_stabilizer = 0
-        if (
-            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
-            is not None
-        ):
-            has_stabilizer = 1
+        has_stabilizer = None
+        try:
+            if (
+                beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+                is not None
+            ):
+                has_stabilizer = 1
+            else:
+                has_stabilizer = 0
+        except Exception:
+            pass
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
         for soup in soup_list:

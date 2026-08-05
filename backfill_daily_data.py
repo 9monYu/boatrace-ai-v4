@@ -15,8 +15,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
-from constants import SESSION
-from models import Race, Racer
+from constants import SESSION, TRIFECTA_LIST
+from models import Race, Racer, Ticket
 
 
 def download(url, target_date):
@@ -28,7 +28,7 @@ def download(url, target_date):
         {
             "profile.managed_default_content_settings.images": 2,
             "credentials_enable_service": False,
-            "download.default_directory": os.path.join(os.getcwd(), "temp"),
+            "download.default_directory": os.path.join(os.getcwd(), "backfill"),
             "download_bubble.partial_view_enabled": False,
         },
     )
@@ -62,7 +62,7 @@ def download(url, target_date):
 
 def decompress(file_name):
     decompressed_file_name = None
-    directory_path = os.path.join(os.getcwd(), "temp")
+    directory_path = os.path.join(os.getcwd(), "backfill")
     file_path = os.path.join(directory_path, file_name)
     file = lhafile.LhaFile(file_path)
     for info in file.infolist():
@@ -76,7 +76,7 @@ def decompress(file_name):
 
 def import_official_data(race_file_name, result_file_name):
     # race
-    with open(os.path.join(os.getcwd(), "temp", race_file_name), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "backfill", race_file_name), "r", encoding="CP932") as f:
         venue = None
         day_number = None
         date_ = f'20{race_file_name.split(".")[0][1:]}'
@@ -90,7 +90,7 @@ def import_official_data(race_file_name, result_file_name):
             ((date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - start).days / (end - start).days) * 100,
             2,
         )
-        for line in f.readlines():
+        for line in f:
             bgn_match = re.match(r"^([0-9]{2})(BBGN)", line)
             if bgn_match is not None:
                 venue = bgn_match.group(1)
@@ -129,10 +129,10 @@ def import_official_data(race_file_name, result_file_name):
     SESSION.commit()
 
     # result
-    with open(os.path.join(os.getcwd(), "temp", result_file_name), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "backfill", result_file_name), "r", encoding="CP932") as f:
         date_ = int(f'20{result_file_name.split(".")[0][1:]}')
         venue = None
-        for line in f.readlines():
+        for line in f:
             bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
             if bgn_match is not None:
                 venue = bgn_match.group(1)
@@ -310,22 +310,32 @@ def scrape(target_date):
         except Exception:
             pass
 
-        is_last_day = 0
-        if (
-            beautifulsoup.find("li", class_="is-active2")
-            .find("span", class_="tab2_inner")
-            .find("span")
-            .get_text(strip=True)
-            == "最終日"
-        ):
-            is_last_day = 1
+        is_last_day = None
+        try:
+            if (
+                beautifulsoup.find("li", class_="is-active2")
+                .find("span", class_="tab2_inner")
+                .find("span")
+                .get_text(strip=True)
+                == "最終日"
+            ):
+                is_last_day = 1
+            else:
+                is_last_day = 0
+        except Exception:
+            pass
 
-        has_stabilizer = 0
-        if (
-            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
-            is not None
-        ):
-            has_stabilizer = 1
+        has_stabilizer = None
+        try:
+            if (
+                beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+                is not None
+            ):
+                has_stabilizer = 1
+            else:
+                has_stabilizer = 0
+        except Exception:
+            pass
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
         for soup in soup_list:
@@ -821,7 +831,7 @@ def scrape(target_date):
         racer_list[5].extend(boat6_result_list)
 
         with open(
-            os.path.join(os.getcwd(), "temp", f"race_{target_date}.csv"),
+            os.path.join(os.getcwd(), "backfill", f"race_{target_date}.csv"),
             mode="a",
             encoding="UTF-8",
             newline="",
@@ -850,7 +860,7 @@ def scrape(target_date):
             )
 
         with open(
-            os.path.join(os.getcwd(), "temp", f"racer_{target_date}.csv"),
+            os.path.join(os.getcwd(), "backfill", f"racer_{target_date}.csv"),
             mode="a",
             encoding="UTF-8",
             newline="",
@@ -859,10 +869,38 @@ def scrape(target_date):
             for racer in racer_list:
                 writer.writerow(racer)
 
+        # deadline odds
+        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        try:
+            response = requests.get(url)
+        except Exception:
+            response = requests.get(url)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+        soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
+        odds_list = []
+        odds_list.append(race.id)
+        for index, soup in enumerate(soup_list):
+            odds = None
+            try:
+                odds = float(soup.get_text(strip=True))
+            except ValueError:
+                pass
+            odds_list.append(odds)
+            if index == 119:
+                break
+        with open(
+            os.path.join(os.getcwd(), "backfill", f"deadline_odds_{target_date}.csv"),
+            mode="a",
+            encoding="UTF-8",
+            newline="",
+        ) as f:
+            writer = csv.writer(f)
+            writer.writerow(odds_list)
+
 
 def import_scraping_data(target_date):
     # race
-    with open(os.path.join(os.getcwd(), "temp", f"race_{target_date}.csv"), "r", encoding="UTF-8") as f:
+    with open(os.path.join(os.getcwd(), "backfill", f"race_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row[0])
             race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
@@ -888,7 +926,7 @@ def import_scraping_data(target_date):
     # racer
     race_id_list = []
     racer_list = []
-    with open(os.path.join(os.getcwd(), "temp", f"racer_{target_date}.csv"), "r", encoding="UTF-8") as f:
+    with open(os.path.join(os.getcwd(), "backfill", f"racer_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row[0])
             if race_id not in race_id_list:
@@ -1184,6 +1222,55 @@ def import_scraping_data(target_date):
                     else 0.0
                 )
 
+    SESSION.commit()
+
+    # deadline odds
+    ticket_list = []
+    with open(os.path.join(os.getcwd(), "backfill", f"deadline_odds_{target_date}.csv"), "r", encoding="UTF-8") as f:
+        for row in csv.reader(f):
+            race_id = int(row.pop(0))
+            race = SESSION.query(Race).filter(Race.id == race_id).one()
+            deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
+            sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
+            for index in range(120):
+                is_hit = (
+                    1
+                    if race.first == TRIFECTA_LIST[index][0]
+                    and race.second == TRIFECTA_LIST[index][1]
+                    and race.third == TRIFECTA_LIST[index][2]
+                    else 0
+                )
+                deadline_odds = float(row[index]) if row[index] and row[index] != "0.0" else None
+                deadline_odds_market_share = (
+                    (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
+                )
+                ticket = (
+                    SESSION.query(Ticket)
+                    .filter(
+                        Ticket.race_id == race_id,
+                        Ticket.first == TRIFECTA_LIST[index][0],
+                        Ticket.second == TRIFECTA_LIST[index][1],
+                        Ticket.third == TRIFECTA_LIST[index][2],
+                    )
+                    .one_or_none()
+                )
+                if ticket is not None:
+                    ticket.is_hit = is_hit
+                    ticket.deadline_odds = deadline_odds
+                    ticket.deadline_odds_market_share = deadline_odds_market_share
+                else:
+                    ticket_list.append(
+                        Ticket(
+                            race_id=race_id,
+                            first=TRIFECTA_LIST[index][0],
+                            second=TRIFECTA_LIST[index][1],
+                            third=TRIFECTA_LIST[index][2],
+                            is_hit=is_hit,
+                            deadline_odds=deadline_odds,
+                            deadline_odds_market_share=deadline_odds_market_share,
+                        )
+                    )
+    SESSION.add_all(ticket_list)
     SESSION.commit()
 
 

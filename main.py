@@ -58,211 +58,262 @@ def run_thread(target):
     thread.start()
 
 
-def import_race_data(target_date: date):
-    if os.path.isfile(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT')):
-        with open(
-            os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932"
-        ) as f:
-            venue = None
-            day_number = None
-            date_ = target_date.strftime("%Y%m%d")
-            if 5 <= int(date_[4:6]) <= 10:
-                start = date(int(date_[:4]), 5, 1)
-                end = date(int(date_[:4]), 10, 31)
-            else:
-                start = date(int(date_[:4]) - 1, 11, 1)
-                end = date(int(date_[:4]), 4, 30)
-            period_progress_rate = round(
-                ((date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - start).days / (end - start).days) * 100,
-                2,
-            )
-            for line in f.readlines():
-                bgn_match = re.match(r"^([0-9]{2})(BBGN)", line)
-                if bgn_match is not None:
-                    venue = bgn_match.group(1)
-                end_match = re.match(r"^([0-9]{2})(BEND)", line)
-                if end_match is not None:
-                    venue = None
-                day_match = re.match(r"^   第　([１-７])日.*$", line)
-                if day_match is not None:
-                    day_number = int(day_match.group(1))
-                race_match = re.match(r"^　?([０-９]{1,2})Ｒ.*([０-９]{2})：([０-９]{2}) $", line)
-                if race_match is not None:
-                    race_number = int(race_match.group(1))
-                    hour = int(race_match.group(2))
-                    minute = int(race_match.group(3))
-                    race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
-                    race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
-                    if race is not None:
-                        race.date = int(date_)
-                        race.period_progress_rate = period_progress_rate
-                        race.venue = int(venue)
-                        race.race_number = race_number
-                        race.deadline = f"{str(hour).zfill(2)}:{str(minute).zfill(2)}"
-                        race.day_number = day_number
-                    else:
-                        SESSION.add(
-                            Race(
-                                id=race_id,
-                                date=int(date_),
-                                period_progress_rate=period_progress_rate,
-                                venue=int(venue),
-                                race_number=race_number,
-                                deadline=f"{str(hour).zfill(2)}:{str(minute).zfill(2)}",
-                                day_number=day_number,
-                            )
+def download(url, target_date: date):
+    _logger.info("Starting download(): target_date=%s", target_date.strftime("%Y%m%d"))
+
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    chrome_options.add_experimental_option(
+        "prefs",
+        {
+            "profile.managed_default_content_settings.images": 2,
+            "credentials_enable_service": False,
+            "download.default_directory": os.path.join(os.getcwd(), "temp"),
+            "download_bubble.partial_view_enabled": False,
+        },
+    )
+
+    try:
+        driver = webdriver.Chrome(options=chrome_options)
+        wait = WebDriverWait(driver=driver, timeout=20)
+
+        driver.get(url)
+        wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
+        select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))
+        select = Select(select_box)
+
+        for ym_index, option in enumerate(select.options):
+            ym_match = re.search(r"(\d{4})年\s*(\d{1,2})月", option.text.strip())
+            if ym_match is None:
+                continue
+            if int(ym_match.group(1)) * 100 + int(ym_match.group(2)) == int(target_date.strftime("%Y%m%d")) // 100:
+                select.select_by_index(ym_index)
+                driver.switch_to.default_content()
+                wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "JYOU")))
+                for radio in wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY"))):
+                    if radio.get_attribute("value") == str(int(target_date.strftime("%Y%m%d")) % 100).zfill(2):
+                        radio.click()
+                        download_button = wait.until(
+                            EC.element_to_be_clickable((By.XPATH, '//input[@onclick="download(this)"]'))
                         )
-            try:
-                SESSION.commit()
-            except SQLAlchemyError:
-                SESSION.rollback()
-                raise
+                        download_button.click()
+                        break
+                break
+        time_module.sleep(5)
+    except Exception:
+        _logger.exception("Failed to download official data: target_date=%s", target_date.strftime("%Y%m%d"))
+        raise
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass
+
+
+def import_race_data(target_date: date):
+    _logger.info("Starting import_race_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+
+    with open(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932") as f:
+        venue = None
+        day_number = None
+        date_ = target_date.strftime("%Y%m%d")
+        if 5 <= int(date_[4:6]) <= 10:
+            start = date(int(date_[:4]), 5, 1)
+            end = date(int(date_[:4]), 10, 31)
+        else:
+            start = date(int(date_[:4]) - 1, 11, 1)
+            end = date(int(date_[:4]), 4, 30)
+        period_progress_rate = round(
+            ((date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - start).days / (end - start).days) * 100,
+            2,
+        )
+        for line in f:
+            bgn_match = re.match(r"^([0-9]{2})(BBGN)", line)
+            if bgn_match is not None:
+                venue = bgn_match.group(1)
+            end_match = re.match(r"^([0-9]{2})(BEND)", line)
+            if end_match is not None:
+                venue = None
+            day_match = re.match(r"^   第　([１-７])日.*$", line)
+            if day_match is not None:
+                day_number = int(day_match.group(1))
+            race_match = re.match(r"^　?([０-９]{1,2})Ｒ.*([０-９]{2})：([０-９]{2}) $", line)
+            if race_match is not None:
+                race_number = int(race_match.group(1))
+                hour = int(race_match.group(2))
+                minute = int(race_match.group(3))
+                race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
+                race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                if race is not None:
+                    race.date = int(date_)
+                    race.period_progress_rate = period_progress_rate
+                    race.venue = int(venue)
+                    race.race_number = race_number
+                    race.deadline = f"{str(hour).zfill(2)}:{str(minute).zfill(2)}"
+                    race.day_number = day_number
+                else:
+                    SESSION.add(
+                        Race(
+                            id=race_id,
+                            date=int(date_),
+                            period_progress_rate=period_progress_rate,
+                            venue=int(venue),
+                            race_number=race_number,
+                            deadline=f"{str(hour).zfill(2)}:{str(minute).zfill(2)}",
+                            day_number=day_number,
+                        )
+                    )
+        try:
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception("Failed to commit imported race data: target_date=%s", target_date.strftime("%Y%m%d"))
+            SESSION.rollback()
+            raise
 
 
 def import_result_data(target_date: date):
-    if os.path.isfile(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT")):
-        with open(
-            os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932"
-        ) as f:
-            date_ = target_date.strftime("%Y%m%d")
-            venue = None
-            for line in f.readlines():
-                bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
-                if bgn_match is not None:
-                    venue = bgn_match.group(1)
-                end_match = re.match(r"^([0-9]{2})(KEND)", line)
-                if end_match is not None:
-                    venue = None
-                result_match = re.match(r"^(\s{10,11})([0-9]{1,2})(R)", line)
-                if result_match is not None:
-                    race_number = result_match.group(2)
-                    race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
-                    race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
-                    if race is not None:
-                        words = [word for word in line.split(" ") if word]
-                        words = [x.strip() for x in words if x.strip()]
-                        # 中止
-                        if words[1] == "中　止":
-                            race.is_cancel = 1
-                        elif len(words) == 9:
-                            # 3連単● 3連複● 2連単● 2連複●
-                            if (
-                                re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[7])
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_trio = round(int(words[4]) / 100, 1)
-                                race.odds_exacta = round(int(words[6]) / 100, 1)
-                                race.odds_quinella = round(int(words[8]) / 100, 1)
-                        elif len(words) == 8:
-                            # 3連単● 3連複● 2連単● 2連複×
-                            if (
-                                re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_trio = round(int(words[4]) / 100, 1)
-                                race.odds_exacta = round(int(words[6]) / 100, 1)
-                            # 3連単● 3連複● 2連単× 2連複●
-                            elif (
-                                re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[6])
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_trio = round(int(words[4]) / 100, 1)
-                                race.odds_quinella = round(int(words[7]) / 100, 1)
-                            # 3連単● 3連複× 2連単● 2連複●
-                            elif (
-                                re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[4])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[6])
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_exacta = round(int(words[5]) / 100, 1)
-                                race.odds_quinella = round(int(words[7]) / 100, 1)
-                            else:
-                                pass
-                        elif len(words) == 7:
-                            # 3連単● 3連複● 2連単● 2連複- ※?
-                            if (
-                                re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
-                                and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_trio = round(int(words[4]) / 100, 1)
-                                race.odds_exacta = round(int(words[6]) / 100, 1)
-                            # 3連単● 3連複× 2連単● 2連複×
-                            elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
-                                r"^[1-6]{1}-[1-6]{1}$", words[4]
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.third = int(words[1].split("-")[2])
-                                race.odds_trifecta = round(int(words[2]) / 100, 1)
-                                race.odds_exacta = round(int(words[5]) / 100, 1)
-                            # 3連単× 3連複× 2連単● 2連複●
-                            elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(
-                                r"^[1-6]{1}-[1-6]{1}$", words[5]
-                            ):
-                                race.first = int(words[3].split("-")[0])
-                                race.second = int(words[3].split("-")[1])
-                                race.odds_exacta = round(int(words[4]) / 100, 1)
-                                race.odds_quinella = round(int(words[6]) / 100, 1)
-                            else:
-                                pass
-                        elif len(words) == 6:
-                            # 3連単× 3連複× 2連単● 2連複×
-                            if re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]):
-                                race.first = int(words[3].split("-")[0])
-                                race.second = int(words[3].split("-")[1])
-                                race.odds_exacta = round(int(words[4]) / 100, 1)
-                        elif len(words) == 5:
-                            # 3連単- 3連複- 2連単● 2連複●
-                            if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
-                                r"^[1-6]{1}-[1-6]{1}$", words[3]
-                            ):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.odds_exacta = round(int(words[2]) / 100, 1)
-                                race.odds_quinella = round(int(words[4]) / 100, 1)
-                        elif len(words) == 4:
-                            # 3連単- 3連複- 2連単● 2連複×
-                            if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]):
-                                race.first = int(words[1].split("-")[0])
-                                race.second = int(words[1].split("-")[1])
-                                race.odds_exacta = round(int(words[2]) / 100, 1)
+    _logger.info("Starting import_result_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+
+    with open(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
+        date_ = target_date.strftime("%Y%m%d")
+        venue = None
+        for line in f:
+            bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
+            if bgn_match is not None:
+                venue = bgn_match.group(1)
+            end_match = re.match(r"^([0-9]{2})(KEND)", line)
+            if end_match is not None:
+                venue = None
+            result_match = re.match(r"^(\s{10,11})([0-9]{1,2})(R)", line)
+            if result_match is not None:
+                race_number = result_match.group(2)
+                race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
+                race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                if race is not None:
+                    words = [word for word in line.split(" ") if word]
+                    words = [x.strip() for x in words if x.strip()]
+                    # 中止
+                    if words[1] == "中　止":
+                        race.is_cancel = 1
+                    elif len(words) == 9:
+                        # 3連単● 3連複● 2連単● 2連複●
+                        if (
+                            re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[7])
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_trio = round(int(words[4]) / 100, 1)
+                            race.odds_exacta = round(int(words[6]) / 100, 1)
+                            race.odds_quinella = round(int(words[8]) / 100, 1)
+                    elif len(words) == 8:
+                        # 3連単● 3連複● 2連単● 2連複×
+                        if (
+                            re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_trio = round(int(words[4]) / 100, 1)
+                            race.odds_exacta = round(int(words[6]) / 100, 1)
+                        # 3連単● 3連複● 2連単× 2連複●
+                        elif (
+                            re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[6])
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_trio = round(int(words[4]) / 100, 1)
+                            race.odds_quinella = round(int(words[7]) / 100, 1)
+                        # 3連単● 3連複× 2連単● 2連複●
+                        elif (
+                            re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[4])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[6])
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_exacta = round(int(words[5]) / 100, 1)
+                            race.odds_quinella = round(int(words[7]) / 100, 1)
                         else:
                             pass
-                        if race.is_cancel is None:
-                            race.is_cancel = 0
-            try:
-                SESSION.commit()
-            except SQLAlchemyError:
-                SESSION.rollback()
-                raise
+                    elif len(words) == 7:
+                        # 3連単● 3連複● 2連単● 2連複- ※?
+                        if (
+                            re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[3])
+                            and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5])
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_trio = round(int(words[4]) / 100, 1)
+                            race.odds_exacta = round(int(words[6]) / 100, 1)
+                        # 3連単● 3連複× 2連単● 2連複×
+                        elif re.match(r"^[1-6]{1}-[1-6]{1}-[1-6]{1}$", words[1]) and re.match(
+                            r"^[1-6]{1}-[1-6]{1}$", words[4]
+                        ):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.third = int(words[1].split("-")[2])
+                            race.odds_trifecta = round(int(words[2]) / 100, 1)
+                            race.odds_exacta = round(int(words[5]) / 100, 1)
+                        # 3連単× 3連複× 2連単● 2連複●
+                        elif re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[5]):
+                            race.first = int(words[3].split("-")[0])
+                            race.second = int(words[3].split("-")[1])
+                            race.odds_exacta = round(int(words[4]) / 100, 1)
+                            race.odds_quinella = round(int(words[6]) / 100, 1)
+                        else:
+                            pass
+                    elif len(words) == 6:
+                        # 3連単× 3連複× 2連単● 2連複×
+                        if re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]):
+                            race.first = int(words[3].split("-")[0])
+                            race.second = int(words[3].split("-")[1])
+                            race.odds_exacta = round(int(words[4]) / 100, 1)
+                    elif len(words) == 5:
+                        # 3連単- 3連複- 2連単● 2連複●
+                        if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]) and re.match(r"^[1-6]{1}-[1-6]{1}$", words[3]):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.odds_exacta = round(int(words[2]) / 100, 1)
+                            race.odds_quinella = round(int(words[4]) / 100, 1)
+                    elif len(words) == 4:
+                        # 3連単- 3連複- 2連単● 2連複×
+                        if re.match(r"^[1-6]{1}-[1-6]{1}$", words[1]):
+                            race.first = int(words[1].split("-")[0])
+                            race.second = int(words[1].split("-")[1])
+                            race.odds_exacta = round(int(words[2]) / 100, 1)
+                    else:
+                        pass
+                    if race.is_cancel is None:
+                        race.is_cancel = 0
+        try:
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception("Failed to commit imported result data: target_date=%s", target_date.strftime("%Y%m%d"))
+            SESSION.rollback()
+            raise
 
 
 def scrape(target_date: date):
+    _logger.info("Starting scrape(): target_date=%s", target_date.strftime("%Y%m%d"))
+
     race_list = (
         SESSION.query(Race)
         .filter(
@@ -310,24 +361,34 @@ def scrape(target_date: date):
             else:
                 pass
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'grade': race_id=%s", race.id)
 
-        is_last_day = 0
-        if (
-            beautifulsoup.find("li", class_="is-active2")
-            .find("span", class_="tab2_inner")
-            .find("span")
-            .get_text(strip=True)
-            == "最終日"
-        ):
-            is_last_day = 1
+        is_last_day = None
+        try:
+            if (
+                beautifulsoup.find("li", class_="is-active2")
+                .find("span", class_="tab2_inner")
+                .find("span")
+                .get_text(strip=True)
+                == "最終日"
+            ):
+                is_last_day = 1
+            else:
+                is_last_day = 0
+        except Exception:
+            _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race.id)
 
-        has_stabilizer = 0
-        if (
-            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
-            is not None
-        ):
-            has_stabilizer = 1
+        has_stabilizer = None
+        try:
+            if (
+                beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+                is not None
+            ):
+                has_stabilizer = 1
+            else:
+                has_stabilizer = 0
+        except Exception:
+            _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race.id)
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
         for soup in soup_list:
@@ -435,25 +496,25 @@ def scrape(target_date: date):
         boat6_before_info_list = [None, None, None, None, None, None]
 
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-        #  temperature
+        # temperature
         try:
             before_info_temperature = float(
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race.id)
         # weather
         try:
             before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race.id)
         # wind speed
         try:
             before_info_wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race.id)
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -461,21 +522,21 @@ def scrape(target_date: date):
                     before_info_wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race.id)
         # water temperature
         try:
             before_info_water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race.id)
         # wave height
         try:
             before_info_wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race.id)
 
         # course
         # start timing
@@ -536,8 +597,8 @@ def scrape(target_date: date):
                                 boat6_before_info_list[1] = float(start_timing)
                         case _:
                             pass
-                except ValueError:
-                    pass
+                except Exception:
+                    _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race.id)
 
         for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
             for index, tr in enumerate(soup.find_all("tr")):
@@ -560,8 +621,8 @@ def scrape(target_date: date):
                                 boat6_before_info_list[2] = float(td_list[3].get_text(strip=True).replace("kg", ""))
                             case _:
                                 pass
-                    except ValueError:
-                        pass
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race.id)
                     # display time
                     try:
                         match boat_number:
@@ -579,8 +640,8 @@ def scrape(target_date: date):
                                 boat6_before_info_list[4] = float(td_list[4].get_text(strip=True))
                             case _:
                                 pass
-                    except ValueError:
-                        pass
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race.id)
                     # tilt
                     try:
                         match boat_number:
@@ -598,8 +659,8 @@ def scrape(target_date: date):
                                 boat6_before_info_list[5] = float(td_list[5].get_text(strip=True))
                             case _:
                                 pass
-                    except ValueError:
-                        pass
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race.id)
                 elif index == 2:
                     # adjusted weight
                     try:
@@ -618,8 +679,8 @@ def scrape(target_date: date):
                                 boat6_before_info_list[3] = float(tr.find("td").get_text(strip=True))
                             case _:
                                 pass
-                    except ValueError:
-                        pass
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race.id)
                 else:
                     pass
             if boat_number == 6:
@@ -658,25 +719,25 @@ def scrape(target_date: date):
         boat6_result_list = [None, None, None, None]
 
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-        #  temperature
+        # temperature
         try:
             temperature = float(
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'temperature': race_id=%s", race.id)
         # weather
         try:
             weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'weather': race_id=%s", race.id)
         # wind speed
         try:
             wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'wind_speed': race_id=%s", race.id)
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -684,21 +745,21 @@ def scrape(target_date: date):
                     wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'wind_direction': race_id=%s", race.id)
         # water temperature
         try:
             water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'water_temperature': race_id=%s", race.id)
         # wave height
         try:
             wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'wave_height': race_id=%s", race.id)
 
         # winning style
         try:
@@ -706,7 +767,7 @@ def scrape(target_date: date):
                 beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
             )
         except Exception:
-            pass
+            _logger.exception("Failed to scrape 'winning_style': race_id=%s", race.id)
 
         # course
         # start timing
@@ -770,7 +831,7 @@ def scrape(target_date: date):
                         case _:
                             pass
                 except Exception:
-                    pass
+                    _logger.exception("Failed to scrape 'start_timing': race_id=%s", race.id)
 
         # result
         # race time
@@ -783,15 +844,16 @@ def scrape(target_date: date):
                     try:
                         result = int(td_list[0].get_text(strip=True))
                     except Exception:
-                        pass
+                        _logger.exception("Failed to scrape 'result': race_id=%s", race.id)
                     race_time = None
-                    try:
-                        minutes = int(td_list[3].get_text(strip=True).split("'")[0])
-                        seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
-                        decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
-                        race_time = minutes * 60 + seconds + decimal * 0.1
-                    except Exception:
-                        pass
+                    if result is not None and result < 5:
+                        try:
+                            minutes = int(td_list[3].get_text(strip=True).split("'")[0])
+                            seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
+                            decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
+                            race_time = minutes * 60 + seconds + decimal * 0.1
+                        except Exception:
+                            _logger.exception("Failed to scrape 'race_time': race_id=%s", race.id)
                     match int(td_list[1].get_text(strip=True)):
                         case 1:
                             boat1_result_list[2] = result
@@ -861,129 +923,212 @@ def scrape(target_date: date):
             for racer in racer_list:
                 writer.writerow(racer)
 
+        # deadline odds
+        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        try:
+            response = requests.get(url)
+        except Exception:
+            response = requests.get(url)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+        soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
+        odds_list = []
+        odds_list.append(race.id)
+        for index, soup in enumerate(soup_list):
+            odds = None
+            try:
+                odds = float(soup.get_text(strip=True))
+            except ValueError:
+                pass
+            odds_list.append(odds)
+            if index == 119:
+                break
+        with open(
+            os.path.join(os.getcwd(), "temp", f"deadline_odds_{target_date.strftime('%Y%m%d')}.csv"),
+            mode="a",
+            encoding="UTF-8",
+            newline="",
+        ) as f:
+            writer = csv.writer(f)
+            writer.writerow(odds_list)
+
 
 def import_scraping_data(target_date: date):
-    if os.path.isfile(os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv")):
-        with open(
-            os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
-        ) as f:
-            for row in csv.reader(f):
-                race_id = int(row[0])
-                race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
-                if race is not None:
-                    race.grade = row[1] if row[1] != "" else None
-                    race.is_last_day = row[2] if row[2] != "" else None
-                    race.has_stabilizer = row[3] if row[3] != "" else None
-                    race.before_info_temperature = float(row[4]) if row[4] != "" else None
-                    race.before_info_weather = row[5] if row[5] != "" else None
-                    race.before_info_wind_speed = int(row[6]) if row[6] != "" else None
-                    race.before_info_wind_direction = int(row[7]) if row[7] != "" else None
-                    race.before_info_water_temperature = float(row[8]) if row[8] != "" else None
-                    race.before_info_wave_height = int(row[9]) if row[9] != "" else None
-                    race.temperature = float(row[10]) if row[10] != "" else None
-                    race.weather = row[11] if row[11] != "" else None
-                    race.wind_speed = int(row[12]) if row[12] != "" else None
-                    race.wind_direction = int(row[13]) if row[13] != "" else None
-                    race.water_temperature = float(row[14]) if row[14] != "" else None
-                    race.wave_height = int(row[15]) if row[15] != "" else None
-                    race.winning_style = row[16] if row[16] != "" else None
+    _logger.info("Starting import_scraping_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+
+    with open(
+        os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
+    ) as f:
+        for row in csv.reader(f):
+            race_id = int(row[0])
+            race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+            if race is not None:
+                race.grade = row[1] if row[1] != "" else None
+                race.is_last_day = row[2] if row[2] != "" else None
+                race.has_stabilizer = row[3] if row[3] != "" else None
+                race.before_info_temperature = float(row[4]) if row[4] != "" else None
+                race.before_info_weather = row[5] if row[5] != "" else None
+                race.before_info_wind_speed = int(row[6]) if row[6] != "" else None
+                race.before_info_wind_direction = int(row[7]) if row[7] != "" else None
+                race.before_info_water_temperature = float(row[8]) if row[8] != "" else None
+                race.before_info_wave_height = int(row[9]) if row[9] != "" else None
+                race.temperature = float(row[10]) if row[10] != "" else None
+                race.weather = row[11] if row[11] != "" else None
+                race.wind_speed = int(row[12]) if row[12] != "" else None
+                race.wind_direction = int(row[13]) if row[13] != "" else None
+                race.water_temperature = float(row[14]) if row[14] != "" else None
+                race.wave_height = int(row[15]) if row[15] != "" else None
+                race.winning_style = row[16] if row[16] != "" else None
+    try:
+        SESSION.commit()
+    except SQLAlchemyError:
+        _logger.exception(
+            "Failed to commit imported scraping race data: target_date=%s", target_date.strftime("%Y%m%d")
+        )
+        SESSION.rollback()
+        raise
+
+    with open(
+        os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
+    ) as f:
+        racer_list = []
+        for row in csv.reader(f):
+            race_id = int(row[0])
+            boat_number = int(row[1])
+            racer = (
+                SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one_or_none()
+            )
+            if racer is not None:
+                racer.racer_number = int(row[2])
+                racer.racer_class = row[3]
+                racer.branch = row[4] if row[4] != "" else None
+                racer.hometown = row[5] if row[5] != "" else None
+                racer.age = int(row[6])
+                racer.weight = float(row[7]) if row[7] != "" else None
+                racer.flying = int(row[8])
+                racer.late = int(row[9])
+                racer.average_start_timing = float(row[10]) if row[10] != "" else None
+                racer.all_venue_win_rate = float(row[11]) if row[11] != "" else None
+                racer.all_venue_top2_rate = float(row[12]) if row[12] != "" else None
+                racer.all_venue_top3_rate = float(row[13]) if row[13] != "" else None
+                racer.this_venue_win_rate = float(row[14]) if row[14] != "" else None
+                racer.this_venue_top2_rate = float(row[15]) if row[15] != "" else None
+                racer.this_venue_top3_rate = float(row[16]) if row[16] != "" else None
+                racer.motor_top2_rate = float(row[17]) if row[17] != "" else None
+                racer.motor_top3_rate = float(row[18]) if row[18] != "" else None
+                racer.boat_top2_rate = float(row[19]) if row[19] != "" else None
+                racer.boat_top3_rate = float(row[20]) if row[20] != "" else None
+                racer.before_info_course = int(row[21]) if row[21] != "" else None
+                racer.before_info_start_timing = float(row[22]) if row[22] != "" else None
+                racer.before_info_start_timing_abs = abs(float(row[22])) if row[22] != "" else None
+                racer.before_info_weight = float(row[23]) if row[23] != "" else None
+                racer.before_info_adjusted_weight = float(row[24]) if row[24] != "" else None
+                racer.before_info_display_time = float(row[25]) if row[25] != "" else None
+                racer.before_info_tilt = float(row[26]) if row[26] != "" else None
+                racer.course = int(row[27]) if row[27] != "" else None
+                racer.start_timing = float(row[28]) if row[28] != "" else None
+                racer.result = int(row[29]) if row[29] != "" else None
+                racer.race_time = float(row[30]) if row[30] != "" else None
+            else:
+                racer_list.append(
+                    Racer(
+                        race_id=race_id,
+                        boat_number=boat_number,
+                        racer_number=int(row[2]),
+                        racer_class=row[3],
+                        branch=row[4] if row[4] != "" else None,
+                        hometown=row[5] if row[5] != "" else None,
+                        age=int(row[6]),
+                        weight=float(row[7]) if row[7] != "" else None,
+                        flying=int(row[8]),
+                        late=int(row[9]),
+                        average_start_timing=float(row[10]) if row[10] != "" else None,
+                        all_venue_win_rate=float(row[11]) if row[11] != "" else None,
+                        all_venue_top2_rate=float(row[12]) if row[12] != "" else None,
+                        all_venue_top3_rate=float(row[13]) if row[13] != "" else None,
+                        this_venue_win_rate=float(row[14]) if row[14] != "" else None,
+                        this_venue_top2_rate=float(row[15]) if row[15] != "" else None,
+                        this_venue_top3_rate=float(row[16]) if row[16] != "" else None,
+                        motor_top2_rate=float(row[17]) if row[17] != "" else None,
+                        motor_top3_rate=float(row[18]) if row[18] != "" else None,
+                        boat_top2_rate=float(row[19]) if row[19] != "" else None,
+                        boat_top3_rate=float(row[20]) if row[20] != "" else None,
+                        before_info_course=int(row[21]) if row[21] != "" else None,
+                        before_info_start_timing=float(row[22]) if row[22] != "" else None,
+                        before_info_start_timing_abs=abs(float(row[22])) if row[22] != "" else None,
+                        before_info_weight=float(row[23]) if row[23] != "" else None,
+                        before_info_adjusted_weight=float(row[24]) if row[24] != "" else None,
+                        before_info_display_time=float(row[25]) if row[25] != "" else None,
+                        before_info_tilt=float(row[26]) if row[26] != "" else None,
+                        course=int(row[27]) if row[27] != "" else None,
+                        start_timing=float(row[28]) if row[28] != "" else None,
+                        result=int(row[29]) if row[29] != "" else None,
+                        race_time=float(row[30]) if row[30] != "" else None,
+                    )
+                )
+        SESSION.add_all(racer_list)
         try:
             SESSION.commit()
         except SQLAlchemyError:
+            _logger.exception(
+                "Failed to commit imported scraping racer data: target_date=%s", target_date.strftime("%Y%m%d")
+            )
             SESSION.rollback()
             raise
 
-    if os.path.isfile(os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv")):
-        with open(
-            os.path.join(os.getcwd(), "temp", f"racer_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
-        ) as f:
-            racer_list = []
-            for row in csv.reader(f):
-                race_id = int(row[0])
-                boat_number = int(row[1])
-                racer = (
-                    SESSION.query(Racer)
-                    .filter(Racer.race_id == race_id, Racer.boat_number == boat_number)
+    # deadline odds
+    ticket_list = []
+    with open(
+        os.path.join(os.getcwd(), "temp", f"deadline_odds_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
+    ) as f:
+        for row in csv.reader(f):
+            race_id = int(row.pop(0))
+            race = SESSION.query(Race).filter(Race.id == race_id).one()
+            deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
+            sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
+            for index in range(120):
+                is_hit = (
+                    1
+                    if race.first == TRIFECTA_LIST[index][0]
+                    and race.second == TRIFECTA_LIST[index][1]
+                    and race.third == TRIFECTA_LIST[index][2]
+                    else 0
+                )
+                deadline_odds = float(row[index]) if row[index] and row[index] != "0.0" else None
+                deadline_odds_market_share = (
+                    (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
+                )
+                ticket = (
+                    SESSION.query(Ticket)
+                    .filter(
+                        Ticket.race_id == race_id,
+                        Ticket.first == TRIFECTA_LIST[index][0],
+                        Ticket.second == TRIFECTA_LIST[index][1],
+                        Ticket.third == TRIFECTA_LIST[index][2],
+                    )
                     .one_or_none()
                 )
-                if racer is not None:
-                    racer.racer_number = int(row[2])
-                    racer.racer_class = row[3]
-                    racer.branch = row[4] if row[4] != "" else None
-                    racer.hometown = row[5] if row[5] != "" else None
-                    racer.age = int(row[6])
-                    racer.weight = float(row[7]) if row[7] != "" else None
-                    racer.flying = int(row[8])
-                    racer.late = int(row[9])
-                    racer.average_start_timing = float(row[10]) if row[10] != "" else None
-                    racer.all_venue_win_rate = float(row[11]) if row[11] != "" else None
-                    racer.all_venue_top2_rate = float(row[12]) if row[12] != "" else None
-                    racer.all_venue_top3_rate = float(row[13]) if row[13] != "" else None
-                    racer.this_venue_win_rate = float(row[14]) if row[14] != "" else None
-                    racer.this_venue_top2_rate = float(row[15]) if row[15] != "" else None
-                    racer.this_venue_top3_rate = float(row[16]) if row[16] != "" else None
-                    racer.motor_top2_rate = float(row[17]) if row[17] != "" else None
-                    racer.motor_top3_rate = float(row[18]) if row[18] != "" else None
-                    racer.boat_top2_rate = float(row[19]) if row[19] != "" else None
-                    racer.boat_top3_rate = float(row[20]) if row[20] != "" else None
-                    racer.before_info_course = int(row[21]) if row[21] != "" else None
-                    racer.before_info_start_timing = float(row[22]) if row[22] != "" else None
-                    racer.before_info_start_timing_abs = abs(float(row[22])) if row[22] != "" else None
-                    racer.before_info_weight = float(row[23]) if row[23] != "" else None
-                    racer.before_info_adjusted_weight = float(row[24]) if row[24] != "" else None
-                    racer.before_info_display_time = float(row[25]) if row[25] != "" else None
-                    racer.before_info_tilt = float(row[26]) if row[26] != "" else None
-                    racer.course = int(row[27]) if row[27] != "" else None
-                    racer.start_timing = float(row[28]) if row[28] != "" else None
-                    racer.result = int(row[29]) if row[29] != "" else None
-                    racer.race_time = float(row[30]) if row[30] != "" else None
+                if ticket is not None:
+                    ticket.is_hit = is_hit
+                    ticket.deadline_odds = deadline_odds
+                    ticket.deadline_odds_market_share = deadline_odds_market_share
                 else:
-                    racer_list.append(
-                        Racer(
+                    ticket_list.append(
+                        Ticket(
                             race_id=race_id,
-                            boat_number=boat_number,
-                            racer_number=int(row[2]),
-                            racer_class=row[3],
-                            branch=row[4] if row[4] != "" else None,
-                            hometown=row[5] if row[5] != "" else None,
-                            age=int(row[6]),
-                            weight=float(row[7]) if row[7] != "" else None,
-                            flying=int(row[8]),
-                            late=int(row[9]),
-                            average_start_timing=float(row[10]) if row[10] != "" else None,
-                            all_venue_win_rate=float(row[11]) if row[11] != "" else None,
-                            all_venue_top2_rate=float(row[12]) if row[12] != "" else None,
-                            all_venue_top3_rate=float(row[13]) if row[13] != "" else None,
-                            this_venue_win_rate=float(row[14]) if row[14] != "" else None,
-                            this_venue_top2_rate=float(row[15]) if row[15] != "" else None,
-                            this_venue_top3_rate=float(row[16]) if row[16] != "" else None,
-                            motor_top2_rate=float(row[17]) if row[17] != "" else None,
-                            motor_top3_rate=float(row[18]) if row[18] != "" else None,
-                            boat_top2_rate=float(row[19]) if row[19] != "" else None,
-                            boat_top3_rate=float(row[20]) if row[20] != "" else None,
-                            before_info_course=int(row[21]) if row[21] != "" else None,
-                            before_info_start_timing=float(row[22]) if row[22] != "" else None,
-                            before_info_start_timing_abs=abs(float(row[22])) if row[22] != "" else None,
-                            before_info_weight=float(row[23]) if row[23] != "" else None,
-                            before_info_adjusted_weight=float(row[24]) if row[24] != "" else None,
-                            before_info_display_time=float(row[25]) if row[25] != "" else None,
-                            before_info_tilt=float(row[26]) if row[26] != "" else None,
-                            course=int(row[27]) if row[27] != "" else None,
-                            start_timing=float(row[28]) if row[28] != "" else None,
-                            result=int(row[29]) if row[29] != "" else None,
-                            race_time=float(row[30]) if row[30] != "" else None,
+                            first=TRIFECTA_LIST[index][0],
+                            second=TRIFECTA_LIST[index][1],
+                            third=TRIFECTA_LIST[index][2],
+                            is_hit=is_hit,
+                            deadline_odds=deadline_odds,
+                            deadline_odds_market_share=deadline_odds_market_share,
                         )
                     )
-            SESSION.add_all(racer_list)
-            try:
-                SESSION.commit()
-            except SQLAlchemyError:
-                SESSION.rollback()
-                raise
+    SESSION.add_all(ticket_list)
+    SESSION.commit()
 
 
-def scrape_racer(race_id: int):
-    _logger.info(f"{race_id}: scrape_racer")
+def scrape_race_and_racer(race_id: int):
+    _logger.info("Starting scrape_race_and_racer(): race_id=%s", race_id)
 
     race = SESSION.query(Race).filter(Race.id == race_id).one()
 
@@ -993,6 +1138,52 @@ def scrape_racer(race_id: int):
     except Exception:
         response = requests.get(url)
     beautifulsoup = BeautifulSoup(response.text, "html.parser")
+
+    try:
+        classes = beautifulsoup.find("div", class_="heading2_title").get("class")
+        if "is-SGa" in classes:
+            race.grade = "SG"
+        elif "is-G1a" in classes:
+            race.grade = "PG1"
+        elif "is-G1b" in classes:
+            race.grade = "G1"
+        elif "is-G2b" in classes:
+            race.grade = "G2"
+        elif "is-G3b" in classes:
+            race.grade = "G3"
+        elif "is-ippan" in classes:
+            race.grade = "一般"
+        else:
+            pass
+    except Exception:
+        _logger.exception("Failed to scrape 'grade': race_id=%s", race_id)
+
+    try:
+        if (
+            beautifulsoup.find("li", class_="is-active2")
+            .find("span", class_="tab2_inner")
+            .find("span")
+            .get_text(strip=True)
+            == "最終日"
+        ):
+            race.is_last_day = 1
+        else:
+            race.is_last_day = 0
+    except Exception:
+        _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race_id)
+
+    try:
+        if (
+            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+            is not None
+        ):
+            race.has_stabilizer = 1
+        else:
+            race.has_stabilizer = 0
+    except Exception:
+        _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race_id)
+
+    racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
 
     soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
     for soup in soup_list:
@@ -1060,7 +1251,7 @@ def scrape_racer(race_id: int):
         if td7_text.split("\n")[2] != "-":
             boat_top3_rate = float(td7_text.split("\n")[2])
 
-        racer = SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one_or_none()
+        racer = racer_dict.get(boat_number)
         if racer is not None:
             racer.racer_number = racer_number
             racer.racer_class = racer_class
@@ -1107,15 +1298,17 @@ def scrape_racer(race_id: int):
                     boat_top3_rate=boat_top3_rate,
                 )
             )
+
     try:
         SESSION.commit()
     except SQLAlchemyError:
+        _logger.exception("Failed to commit scraped race and racer: race_id=%s", race_id)
         SESSION.rollback()
         raise
 
 
 def scrape_before_info(race_id: int):
-    _logger.info(f"{race_id}: scrape_before_info")
+    _logger.info("Starting scrape_before_info(): race_id=%s", race_id)
 
     race = SESSION.query(Race).filter(Race.id == race_id).one()
 
@@ -1127,72 +1320,106 @@ def scrape_before_info(race_id: int):
     beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
     soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-    race.before_info_temperature = float(
-        soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-    )
-    race.before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
-    race.before_info_wind_speed = int(
-        soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
-    )
-    for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
-        if class_.startswith("is-wind"):
-            race.before_info_wind_direction = int(class_.replace("is-wind", ""))
-            break
-    race.before_info_water_temperature = float(
-        soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-    )
-    race.before_info_wave_height = int(
-        soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
-    )
+    # temperature
     try:
-        SESSION.commit()
-    except SQLAlchemyError:
-        SESSION.rollback()
-        raise
+        race.before_info_temperature = float(
+            soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+        )
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race_id)
+    # weather
+    try:
+        race.before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race_id)
+    # wind speed
+    try:
+        race.before_info_wind_speed = int(
+            soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+        )
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race_id)
+    # wind direction
+    try:
+        for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
+            if class_.startswith("is-wind"):
+                race.before_info_wind_direction = int(class_.replace("is-wind", ""))
+                break
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race_id)
+    # water temperature
+    try:
+        race.before_info_water_temperature = float(
+            soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+        )
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race_id)
+    # wave height
+    try:
+        race.before_info_wave_height = int(
+            soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
+        )
+    except Exception:
+        _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race_id)
+
+    racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
 
     for course, soup in enumerate(beautifulsoup.find("tbody", class_="is-p10-0").find_all("tr"), start=1):
         boat_number_span = soup.find("span", class_="table1_boatImage1Number")
         if boat_number_span is not None:
-            boat_number = int(boat_number_span.get_text(strip=True))
-            racer = SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one()
-            start_timing = soup.find("span", class_="table1_boatImage1Time").get_text(strip=True)
-            racer.before_info_course = course
-            if start_timing.startswith("F"):
-                racer.before_info_start_timing = float(start_timing.replace("F", "-0"))
-            elif start_timing.startswith("L"):
-                racer.before_info_start_timing = float(start_timing.replace("L", "1"))
-            else:
-                racer.before_info_start_timing = float(start_timing)
-            racer.before_info_start_timing_abs = abs(racer.before_info_start_timing)
-    try:
-        SESSION.commit()
-    except SQLAlchemyError:
-        SESSION.rollback()
-        raise
+            racer = racer_dict.get(int(boat_number_span.get_text(strip=True)))
+            if racer is not None:
+                racer.before_info_course = course
+                try:
+                    start_timing = soup.find("span", class_="table1_boatImage1Time").get_text(strip=True)
+                    if start_timing.startswith("F"):
+                        racer.before_info_start_timing = float(start_timing.replace("F", "-0"))
+                    elif start_timing.startswith("L"):
+                        racer.before_info_start_timing = float(start_timing.replace("L", "1"))
+                    else:
+                        racer.before_info_start_timing = float(start_timing)
+                    racer.before_info_start_timing_abs = abs(racer.before_info_start_timing)
+                except Exception:
+                    _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race_id)
 
     for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
-        racer = SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one()
-        for index, tr in enumerate(soup.find_all("tr")):
-            if index == 0:
-                td_list = tr.find_all("td")
-                racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
-                racer.before_info_display_time = float(td_list[4].get_text(strip=True))
-                racer.before_info_tilt = float(td_list[5].get_text(strip=True))
-            elif index == 2:
-                racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
-            else:
-                pass
-        if boat_number == 6:
-            break
+        racer = racer_dict.get(boat_number)
+        if racer is not None:
+            for index, tr in enumerate(soup.find_all("tr")):
+                if index == 0:
+                    td_list = tr.find_all("td")
+                    try:
+                        racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race_id)
+                    try:
+                        racer.before_info_display_time = float(td_list[4].get_text(strip=True))
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
+                    try:
+                        racer.before_info_tilt = float(td_list[5].get_text(strip=True))
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
+                elif index == 2:
+                    try:
+                        racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race_id)
+                else:
+                    pass
+            if boat_number == 6:
+                break
+
     try:
         SESSION.commit()
     except SQLAlchemyError:
+        _logger.exception("Failed to commit scraped before info: race_id=%s", race_id)
         SESSION.rollback()
         raise
 
 
 def calculate_z_scores(race_id: int):
-    _logger.info(f"{race_id}: calculate_z_scores")
+    _logger.info("Starting calculate_z_scores(): race_id=%s", race_id)
 
     racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).order_by(Racer.boat_number.asc()).all()
 
@@ -1391,9 +1618,16 @@ def calculate_z_scores(race_id: int):
                 else 0.0
             )
 
+    try:
+        SESSION.commit()
+    except SQLAlchemyError:
+        _logger.exception("Failed to commit calculated z-scores: race_id=%s", race_id)
+        SESSION.rollback()
+        raise
+
 
 def calculate_stats(race_id: int):
-    _logger.info(f"{race_id}: calculate_stats")
+    _logger.info("Starting calculate_stats(): race_id=%s", race_id)
 
     racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).order_by(Racer.boat_number.asc()).all()
     for racer in racer_list:
@@ -1481,8 +1715,17 @@ def calculate_stats(race_id: int):
             racer.last10_average_start_timing = None
             racer.last10_start_timing_std = None
 
+    try:
+        SESSION.commit()
+    except SQLAlchemyError:
+        _logger.exception("Failed to commit calculated stats: race_id=%s", race_id)
+        SESSION.rollback()
+        raise
 
-def output_predict_race_data(race: Race) -> bool:
+
+def output_predict_race_data(race: Race):
+    _logger.info("Starting output_predict_race_data(): race_id=%s", race.id)
+
     racer_list = (
         SESSION.query(Racer)
         .filter(
@@ -1530,7 +1773,7 @@ def output_predict_race_data(race: Race) -> bool:
         and racer_list[4].before_info_course == 5
         and racer_list[5].before_info_course == 6
     ):
-        return False
+        return
 
     period = 1 if (race.date // 100) % 100 < 7 else 2
     boat1_period_stat = (
@@ -1637,7 +1880,7 @@ def output_predict_race_data(race: Race) -> bool:
         and boat5_period_stat is not None
         and boat6_period_stat is not None
     ):
-        return False
+        return
 
     # before_info_wind
     wind_sin = 0.0
@@ -2040,28 +2283,26 @@ def output_predict_race_data(race: Race) -> bool:
         writer.writerow(CSV_COLUMN_LIST[:-1])
         writer.writerow(row)
 
-    return True
-
 
 def predict(race_id: int):
-    _logger.info(f"{race_id}: predict")
+    _logger.info("Starting predict(): race_id=%s", race_id)
+
     try:
-        scrape_racer(race_id)
+        csv_path = os.path.join(os.getcwd(), "temp", f"{race_id}.csv")
+
+        if os.path.isfile(csv_path):
+            os.remove(csv_path)
+
+        scrape_race_and_racer(race_id)
         scrape_before_info(race_id)
 
         calculate_z_scores(race_id)
         calculate_stats(race_id)
-        try:
-            SESSION.commit()
-        except SQLAlchemyError:
-            SESSION.rollback()
-            raise
 
         race = (
             SESSION.query(Race)
             .filter(
                 Race.id == race_id,
-                Race.is_cancel == 0,
                 Race.grade.isnot(None),
                 Race.venue.isnot(None),
                 Race.day_number.isnot(None),
@@ -2078,8 +2319,9 @@ def predict(race_id: int):
             .one_or_none()
         )
         if race is not None:
-            if output_predict_race_data(race):
-                predict_df = pandas.read_csv(os.path.join(os.getcwd(), "temp", f"{race_id}.csv"), index_col=0)
+            output_predict_race_data(race)
+            if os.path.isfile(csv_path):
+                predict_df = pandas.read_csv(csv_path, index_col=0)
 
                 deltas_list = []
                 for seed in range(SEED_COUNT):
@@ -2117,6 +2359,7 @@ def predict(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
+                    _logger.exception("Failed to commit predicted tickets: race_id=%s", race_id)
                     SESSION.rollback()
                     raise
 
@@ -2126,14 +2369,14 @@ def predict(race_id: int):
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
-        _logger.exception("")
+        _logger.exception("Failed to predict: race_id=%s", race_id)
         SESSION.rollback()
     finally:
         SESSION.remove()
 
 
 def bet(race_id: int):
-    _logger.info(f"{race_id}: bet")
+    _logger.info("Starting bet(): race_id=%s", race_id)
 
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
@@ -2181,7 +2424,7 @@ def bet(race_id: int):
                     odds = None
                     try:
                         odds = float(soup.get_text(strip=True))
-                    except ValueError:
+                    except Exception:
                         pass
                     if odds is not None:
                         ticket = (
@@ -2201,6 +2444,7 @@ def bet(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
+                    _logger.exception("Failed to commit before deadline odds: race_id=%s", race_id)
                     SESSION.rollback()
                     raise
 
@@ -2233,6 +2477,7 @@ def bet(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
+                    _logger.exception("Failed to commit expected values: race_id=%s", race_id)
                     SESSION.rollback()
                     raise
 
@@ -2294,21 +2539,22 @@ def bet(race_id: int):
                     try:
                         SESSION.commit()
                     except SQLAlchemyError:
-                        _logger.exception("")
+                        _logger.exception("Failed to commit bets: race_id=%s", race_id)
                         SESSION.rollback()
     except Exception:
-        _logger.exception("")
+        _logger.exception("Failed to bet: race_id=%s", race_id)
         SESSION.rollback()
     finally:
         try:
             driver.quit()
         except Exception:
-            _logger.exception("")
+            pass
         SESSION.remove()
 
 
 def save_result(race_id):
-    _logger.info(f"{race_id}: save_result")
+    _logger.info("Starting save_result(): race_id=%s", race_id)
+
     try:
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
@@ -2320,6 +2566,7 @@ def save_result(race_id):
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
         soup = beautifulsoup.find("h3", class_="title12_title is-type1")
         if soup is not None and soup.text == "レース中止":
+            race.is_cancel = 1
             race.grade = None
             race.is_last_day = None
             race.has_stabilizer = None
@@ -2345,6 +2592,93 @@ def save_result(race_id):
             race.odds_quinella = None
             SESSION.query(Racer).filter(Racer.race_id == race_id).delete()
         else:
+            race.is_cancel = 0
+
+            soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
+            #  temperature
+            try:
+                race.temperature = float(
+                    soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+                )
+            except Exception:
+                _logger.exception("Failed to scrape 'temperature': race_id=%s", race_id)
+            # weather
+            try:
+                race.weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
+            except Exception:
+                _logger.exception("Failed to scrape 'weather': race_id=%s", race_id)
+            # wind speed
+            try:
+                race.wind_speed = int(
+                    soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+                )
+            except Exception:
+                _logger.exception("Failed to scrape 'wind_speed': race_id=%s", race_id)
+            # wind direction
+            try:
+                for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
+                    if class_.startswith("is-wind"):
+                        race.wind_direction = int(class_.replace("is-wind", ""))
+                        break
+            except Exception:
+                _logger.exception("Failed to scrape 'wind_direction': race_id=%s", race_id)
+            # water temperature
+            try:
+                race.water_temperature = float(
+                    soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+                )
+            except Exception:
+                _logger.exception("Failed to scrape 'water_temperature': race_id=%s", race_id)
+            # wave height
+            try:
+                race.wave_height = int(
+                    soup_list[5]
+                    .find("span", class_="weather1_bodyUnitLabelData")
+                    .get_text(strip=True)
+                    .replace("cm", "")
+                )
+            except Exception:
+                _logger.exception("Failed to scrape 'wave_height': race_id=%s", race_id)
+
+            # winning style
+            try:
+                race.winning_style = (
+                    beautifulsoup.find("table", class_="is-h108__3rdadd")
+                    .find("td", class_="is-fs16")
+                    .get_text(strip=True)
+                )
+            except Exception:
+                _logger.exception("Failed to scrape 'winning_style': race_id=%s", race_id)
+
+            racer_dict = {
+                racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()
+            }
+
+            # course
+            # start timing
+            for course, soup in enumerate(
+                beautifulsoup.find("table", class_="is-h292__3rdadd").find("tbody").find_all("tr"), start=1
+            ):
+                boat_number_span = soup.find("span", class_="table1_boatImage1Number")
+                if boat_number_span is not None:
+                    racer = racer_dict.get(int(boat_number_span.get_text(strip=True)))
+                    if racer is not None:
+                        racer.course = course
+                        try:
+                            start_timing = (
+                                soup.find("span", class_="table1_boatImage1Time").get_text(strip=True).split(" ")[0]
+                            )
+                            if start_timing.startswith("F"):
+                                racer.start_timing = float(start_timing.replace("F", "-0"))
+                            elif start_timing.startswith("L"):
+                                racer.start_timing = float(start_timing.replace("L", "1"))
+                            else:
+                                racer.start_timing = float(start_timing)
+                        except Exception:
+                            _logger.exception("Failed to scrape 'start_timing': race_id=%s", race_id)
+
+            # result
+            # race time
             for table in beautifulsoup.select("table.is-w495"):
                 headers = [th.get_text(strip=True) for th in table.select("thead th")]
                 if headers == ["着", "枠", "ボートレーサー", "レースタイム"]:
@@ -2354,42 +2688,38 @@ def save_result(race_id):
                         try:
                             result = int(td_list[0].get_text(strip=True))
                         except Exception:
-                            pass
+                            _logger.exception("Failed to scrape 'result': race_id=%s", race_id)
                         boat_number = None
                         try:
                             boat_number = int(td_list[1].get_text(strip=True))
                         except Exception:
-                            pass
+                            _logger.exception("Failed to scrape 'boat_number': race_id=%s", race_id)
                         race_time = None
-                        try:
-                            minutes = int(td_list[3].get_text(strip=True).split("'")[0])
-                            seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
-                            decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
-                            race_time = minutes * 60 + seconds + decimal * 0.1
-                        except Exception:
-                            pass
+                        if result is not None and result < 5:
+                            try:
+                                minutes = int(td_list[3].get_text(strip=True).split("'")[0])
+                                seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
+                                decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
+                                race_time = minutes * 60 + seconds + decimal * 0.1
+                            except Exception:
+                                _logger.exception("Failed to scrape 'race_time': race_id=%s", race_id)
                         if result is not None and boat_number is not None:
-                            racer = (
-                                SESSION.query(Racer)
-                                .filter(Racer.race_id == race_id, Racer.boat_number == boat_number)
-                                .one()
-                            )
-                            racer.result = result
-                            racer.race_time = race_time
+                            racer = racer_dict.get(boat_number)
+                            if racer is not None:
+                                racer.result = result
+                                racer.race_time = race_time
                     break
-        try:
-            SESSION.commit()
-        except SQLAlchemyError:
-            _logger.exception("")
-            SESSION.rollback()
+        SESSION.commit()
     except Exception:
-        _logger.exception("")
+        _logger.exception("Failed to save result: race_id=%s", race_id)
         SESSION.rollback()
     finally:
         SESSION.remove()
 
 
 def charge():
+    _logger.info("Starting charge()")
+
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -2422,7 +2752,7 @@ def charge():
         wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "p.logoutWrap > a.logout"))).click()
         wait.until(EC.alert_is_present()).accept()
         time_module.sleep(10)
-        if balance > 1000:
+        if balance >= 1000:
             driver.get("https://www.boatrace.jp/owpc/pc/login")
             wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
             wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
@@ -2443,15 +2773,17 @@ def charge():
             wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
             time_module.sleep(10)
     except Exception:
-        _logger.exception("")
+        _logger.exception("Failed to charge.")
     finally:
         try:
             driver.quit()
         except Exception:
-            _logger.exception("")
+            pass
 
 
 def daily():
+    _logger.info("Starting daily()")
+
     schedule.clear()
     schedule.every().day.at(DAILY_TIME).do(daily)
     schedule.every().day.at(CHARGE_TIME).do(charge)
@@ -2459,68 +2791,18 @@ def daily():
     today = date.today()
     yesterday = today - timedelta(days=1)
 
-    for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
-        if file_name != ".gitkeep":
-            os.remove(os.path.join(os.getcwd(), "temp", file_name))
-
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    chrome_options.add_experimental_option(
-        "prefs",
-        {
-            "profile.managed_default_content_settings.images": 2,
-            "credentials_enable_service": False,
-            "download.default_directory": os.path.join(os.getcwd(), "temp"),
-            "download_bubble.partial_view_enabled": False,
-        },
-    )
-
     try:
-        driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
-
-        driver.get("https://www1.mbrace.or.jp/od2/B/dindex.html")
-        wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
-        select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))
-        select = Select(select_box)
-        select.select_by_index(1)
-        driver.switch_to.default_content()
-        wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "JYOU")))
-        radios = wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY")))
-        download_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@onclick="download(this)"]')))
-        radios[-1].click()
-        download_button.click()
-        time_module.sleep(10)
-        radios[-2].click()
-        download_button.click()
-        time_module.sleep(10)
-
-        driver.get("https://www1.mbrace.or.jp/od2/K/dindex.html")
-        wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
-        select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))
-        select = Select(select_box)
-        select.select_by_index(1)
-        driver.switch_to.default_content()
-        wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "JYOU")))
-        radios = wait.until(EC.presence_of_all_elements_located((By.NAME, "MDAY")))
-        download_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@onclick="download(this)"]')))
-        radios[-1].click()
-        download_button.click()
-        time_module.sleep(10)
-        radios[-2].click()
-        download_button.click()
-        time_module.sleep(10)
+        for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
+            if file_name != ".gitkeep":
+                os.remove(os.path.join(os.getcwd(), "temp", file_name))
     except Exception:
-        _logger.exception("")
-        return
-    finally:
-        try:
-            driver.quit()
-        except Exception:
-            _logger.exception("")
+        _logger.exception("Failed to clean 'temp' directory.")
 
     try:
+        download("https://www1.mbrace.or.jp/od2/B/dindex.html", today)
+        download("https://www1.mbrace.or.jp/od2/B/dindex.html", yesterday)
+        download("https://www1.mbrace.or.jp/od2/K/dindex.html", yesterday)
+
         for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
             file_path = os.path.join(os.path.join(os.getcwd(), "temp"), file_name)
             if os.path.isfile(file_path) and file_name.endswith(".lzh"):
@@ -2550,11 +2832,6 @@ def daily():
         for race in race_list:
             calculate_z_scores(race.id)
             calculate_stats(race.id)
-        try:
-            SESSION.commit()
-        except SQLAlchemyError:
-            SESSION.rollback()
-            raise
 
         cancel_race_list = (
             SESSION.query(Race)
@@ -2593,6 +2870,7 @@ def daily():
         try:
             SESSION.commit()
         except SQLAlchemyError:
+            _logger.exception("Failed to commit canceled race updates.")
             SESSION.rollback()
             raise
 
@@ -2610,9 +2888,8 @@ def daily():
                 run_thread, partial(save_result, race_id=race.id)
             )
     except Exception:
-        _logger.exception("")
+        _logger.exception("Failed to execute daily task.")
         SESSION.rollback()
-        return
     finally:
         SESSION.remove()
 
