@@ -1233,7 +1233,7 @@ def import_scraping_data(target_date):
             deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
             sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
             for index in range(120):
-                is_hit = (
+                is_win = (
                     1
                     if race.first == TRIFECTA_LIST[index][0]
                     and race.second == TRIFECTA_LIST[index][1]
@@ -1255,7 +1255,7 @@ def import_scraping_data(target_date):
                     .one_or_none()
                 )
                 if ticket is not None:
-                    ticket.is_hit = is_hit
+                    ticket.is_win = is_win
                     ticket.deadline_odds = deadline_odds
                     ticket.deadline_odds_market_share = deadline_odds_market_share
                 else:
@@ -1265,7 +1265,7 @@ def import_scraping_data(target_date):
                             first=TRIFECTA_LIST[index][0],
                             second=TRIFECTA_LIST[index][1],
                             third=TRIFECTA_LIST[index][2],
-                            is_hit=is_hit,
+                            is_win=is_win,
                             deadline_odds=deadline_odds,
                             deadline_odds_market_share=deadline_odds_market_share,
                         )

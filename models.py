@@ -92,7 +92,6 @@ class Race(BASE):
 
     racers = relationship("Racer", backref=__tablename__)
     tickets = relationship("Ticket", backref=__tablename__)
-    bets = relationship("Bet", backref=__tablename__)
 
 
 class Racer(BASE):
@@ -214,7 +213,7 @@ class Ticket(BASE):
     first = Column(INTEGER, primary_key=True)
     second = Column(INTEGER, primary_key=True)
     third = Column(INTEGER, primary_key=True)
-    is_hit = Column(INTEGER)
+    is_win = Column(INTEGER)
     delta = Column(REAL)
     deadline_odds = Column(REAL)
     deadline_odds_market_share = Column(REAL)
@@ -224,12 +223,4 @@ class Ticket(BASE):
     before_deadline_odds_market_share = Column(REAL)
     before_deadline_odds_probability = Column(REAL)
     before_deadline_odds_expected_value = Column(REAL)
-
-
-class Bet(BASE):
-    __tablename__ = "bets"
-
-    race_id = Column(INTEGER, ForeignKey("races.id"), primary_key=True)
-    first = Column(INTEGER, primary_key=True)
-    second = Column(INTEGER, primary_key=True)
-    third = Column(INTEGER, primary_key=True)
+    bet_amount = Column(INTEGER)

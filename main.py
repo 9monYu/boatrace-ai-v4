@@ -45,7 +45,7 @@ from constants import (
     WEATHER_LIST,
     WIND_DIRECTION_ANGLES,
 )
-from models import Bet, PeriodStat, Race, Racer, Ticket, VenueStat
+from models import PeriodStat, Race, Racer, Ticket, VenueStat
 
 _logger = logging.getLogger(__name__)
 
@@ -1086,7 +1086,7 @@ def import_scraping_data(target_date: date):
             deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
             sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
             for index in range(120):
-                is_hit = (
+                is_win = (
                     1
                     if race.first == TRIFECTA_LIST[index][0]
                     and race.second == TRIFECTA_LIST[index][1]
@@ -1108,7 +1108,7 @@ def import_scraping_data(target_date: date):
                     .one_or_none()
                 )
                 if ticket is not None:
-                    ticket.is_hit = is_hit
+                    ticket.is_win = is_win
                     ticket.deadline_odds = deadline_odds
                     ticket.deadline_odds_market_share = deadline_odds_market_share
                 else:
@@ -1118,7 +1118,7 @@ def import_scraping_data(target_date: date):
                             first=TRIFECTA_LIST[index][0],
                             second=TRIFECTA_LIST[index][1],
                             third=TRIFECTA_LIST[index][2],
-                            is_hit=is_hit,
+                            is_win=is_win,
                             deadline_odds=deadline_odds,
                             deadline_odds_market_share=deadline_odds_market_share,
                         )
@@ -2517,6 +2517,7 @@ def bet(race_id: int):
                         wait.until(EC.element_to_be_clickable((By.ID, "amount"))).send_keys(bet_amount)
                         wait.until(EC.element_to_be_clickable((By.ID, "regAmountBtn"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, "amount"))).clear()
+                        bet_ticket.bet_amount = bet_amount * 100
                     wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "btnSubmit"))).click()
                     total_bet_amount = wait.until(
                         EC.visibility_of_element_located((By.ID, "betconfTotalBetAmount"))
@@ -2526,16 +2527,6 @@ def bet(race_id: int):
                     wait.until(EC.element_to_be_clickable((By.ID, "submitBet"))).click()
                     wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
                     time_module.sleep(5)
-
-                    for bet_ticket in bet_ticket_list:
-                        SESSION.add(
-                            Bet(
-                                race_id=bet_ticket.race_id,
-                                first=bet_ticket.first,
-                                second=bet_ticket.second,
-                                third=bet_ticket.third,
-                            )
-                        )
                     try:
                         SESSION.commit()
                     except SQLAlchemyError:

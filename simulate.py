@@ -109,7 +109,7 @@ def main():
                     row.append(f"{ticket.first}-{ticket.second}-{ticket.third}")
                     row.append(ticket.deadline_odds)
                     row.append(bet_unit)
-                    if ticket.is_hit == 1:
+                    if ticket.is_win == 1:
                         hit_race += 1
                         hit_money += round(bet_unit * race.odds_trifecta)
                         if bankroll is not None:

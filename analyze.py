@@ -87,7 +87,7 @@ def main():
                             bet_race += 1
                             for ticket in ticket_list:
                                 bet_money += 100
-                                if ticket.is_hit == 1:
+                                if ticket.is_win == 1:
                                     hit_race += 1
                                     hit_money += round(100 * race.odds_trifecta)
                             if hit_money - bet_money > peak:
