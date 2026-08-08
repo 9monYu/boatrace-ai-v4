@@ -61,35 +61,31 @@ def download(url, target_date):
 
 
 def decompress(file_name):
-    decompressed_file_name = None
     directory_path = os.path.join(os.getcwd(), "backfill")
     file_path = os.path.join(directory_path, file_name)
     file = lhafile.LhaFile(file_path)
     for info in file.infolist():
-        decompressed_file_name = info.filename
         with open(os.path.join(directory_path, info.filename), "wb") as newfile:
             newfile.write(file.read(info.filename))
     del file
     os.remove(file_path)
-    return decompressed_file_name
 
 
-def import_official_data(race_file_name, result_file_name):
+def import_official_data(target_date):
+    year = target_date // 10000
+    month = (target_date // 100) % 100
+    day = target_date % 100
     # race
-    with open(os.path.join(os.getcwd(), "backfill", race_file_name), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "backfill", f"b{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         day_number = None
-        date_ = f'20{race_file_name.split(".")[0][1:]}'
-        if 5 <= int(date_[4:6]) <= 10:
-            start = date(int(date_[:4]), 5, 1)
-            end = date(int(date_[:4]), 10, 31)
+        if 5 <= month <= 10:
+            start = date(year, 5, 1)
+            end = date(year, 10, 31)
         else:
-            start = date(int(date_[:4]) - 1, 11, 1)
-            end = date(int(date_[:4]), 4, 30)
-        period_progress_rate = round(
-            ((date(int(date_[:4]), int(date_[4:6]), int(date_[6:8])) - start).days / (end - start).days) * 100,
-            2,
-        )
+            start = date(year - 1, 11, 1)
+            end = date(year, 4, 30)
+        period_progress_rate = round(((date(year, month, day) - start).days / (end - start).days) * 100, 2)
         for line in f:
             bgn_match = re.match(r"^([0-9]{2})(BBGN)", line)
             if bgn_match is not None:
@@ -105,10 +101,10 @@ def import_official_data(race_file_name, result_file_name):
                 race_number = int(race_match.group(1))
                 hour = int(race_match.group(2))
                 minute = int(race_match.group(3))
-                race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
+                race_id = int(f"{target_date}{venue}{str(race_number).zfill(2)}")
                 race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
                 if race is not None:
-                    race.date = int(date_)
+                    race.date = target_date
                     race.period_progress_rate = period_progress_rate
                     race.venue = int(venue)
                     race.race_number = race_number
@@ -118,7 +114,7 @@ def import_official_data(race_file_name, result_file_name):
                     SESSION.add(
                         Race(
                             id=race_id,
-                            date=int(date_),
+                            date=target_date,
                             period_progress_rate=period_progress_rate,
                             venue=int(venue),
                             race_number=race_number,
@@ -129,8 +125,7 @@ def import_official_data(race_file_name, result_file_name):
     SESSION.commit()
 
     # result
-    with open(os.path.join(os.getcwd(), "backfill", result_file_name), "r", encoding="CP932") as f:
-        date_ = int(f'20{result_file_name.split(".")[0][1:]}')
+    with open(os.path.join(os.getcwd(), "backfill", f"k{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         for line in f:
             bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
@@ -142,7 +137,7 @@ def import_official_data(race_file_name, result_file_name):
             result_match = re.match(r"^(\s{10,11})([0-9]{1,2})(R)", line)
             if result_match is not None:
                 race_number = result_match.group(2)
-                race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
+                race_id = int(f"{target_date}{venue}{str(race_number).zfill(2)}")
                 race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
                 if race is not None:
                     words = [word for word in line.split(" ") if word]
@@ -1388,10 +1383,12 @@ def main():
     download("https://www1.mbrace.or.jp/od2/B/dindex.html", args.target_date)
     download("https://www1.mbrace.or.jp/od2/K/dindex.html", args.target_date)
 
-    race_file_name = decompress(f"b{args.target_date % 1000000}.lzh")
-    result_file_name = decompress(f"k{args.target_date % 1000000}.lzh")
+    if os.path.exists(os.path.join(os.getcwd(), "backfill", f"b{args.target_date % 1000000}.lzh")):
+        decompress(f"b{args.target_date % 1000000}.lzh")
+    if os.path.exists(os.path.join(os.getcwd(), "backfill", f"k{args.target_date % 1000000}.lzh")):
+        decompress(f"k{args.target_date % 1000000}.lzh")
 
-    import_official_data(race_file_name, result_file_name)
+    import_official_data(args.target_date)
 
     scrape(args.target_date)
     import_scraping_data(args.target_date)
