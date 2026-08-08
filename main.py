@@ -76,7 +76,7 @@ def download(url, target_date: date):
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
+        wait = WebDriverWait(driver=driver, timeout=30)
 
         driver.get(url)
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
@@ -842,7 +842,8 @@ def scrape(target_date: date):
                     td_list = tbody.find("tr").find_all("td")
                     result = None
                     try:
-                        result = int(td_list[0].get_text(strip=True))
+                        if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
+                            result = int(td_list[0].get_text(strip=True))
                     except Exception:
                         _logger.exception("Failed to scrape 'result': race_id=%s", race.id)
                     race_time = None
@@ -2364,8 +2365,8 @@ def predict(race_id: int):
                     raise
 
                 deadline = datetime.strptime(race.deadline, "%H:%M")
-                deadline_before_55_seconds = deadline - timedelta(seconds=55)
-                schedule.every().day.at(deadline_before_55_seconds.strftime("%H:%M:%S")).do(
+                deadline_before_65_seconds = deadline - timedelta(seconds=65)
+                schedule.every().day.at(deadline_before_65_seconds.strftime("%H:%M:%S")).do(
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
@@ -2395,7 +2396,7 @@ def bet(race_id: int):
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=10)
+        wait = WebDriverWait(driver=driver, timeout=15)
 
         driver.get("https://www.boatrace.jp/owpc/pc/login")
 
@@ -2677,7 +2678,8 @@ def save_result(race_id):
                         td_list = tbody.find("tr").find_all("td")
                         result = None
                         try:
-                            result = int(td_list[0].get_text(strip=True))
+                            if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
+                                result = int(td_list[0].get_text(strip=True))
                         except Exception:
                             _logger.exception("Failed to scrape 'result': race_id=%s", race_id)
                         boat_number = None
@@ -2726,7 +2728,7 @@ def charge():
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=20)
+        wait = WebDriverWait(driver=driver, timeout=30)
 
         driver.get("https://login.paypay-bank.co.jp/")
         wait.until(EC.element_to_be_clickable((By.ID, "idTenNo"))).send_keys(PAYPAY_BANK_STORE_NUMBER)

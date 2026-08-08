@@ -33,7 +33,7 @@ def download(url, target_date):
         },
     )
     driver = webdriver.Chrome(options=chrome_options)
-    wait = WebDriverWait(driver=driver, timeout=20)
+    wait = WebDriverWait(driver=driver, timeout=30)
     driver.get(url)
     wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
     select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))
@@ -789,17 +789,19 @@ def scrape(target_date):
                     td_list = tbody.find("tr").find_all("td")
                     result = None
                     try:
-                        result = int(td_list[0].get_text(strip=True))
+                        if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
+                            result = int(td_list[0].get_text(strip=True))
                     except Exception:
                         pass
                     race_time = None
-                    try:
-                        minutes = int(td_list[3].get_text(strip=True).split("'")[0])
-                        seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
-                        decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
-                        race_time = minutes * 60 + seconds + decimal * 0.1
-                    except Exception:
-                        pass
+                    if result is not None and result < 5:
+                        try:
+                            minutes = int(td_list[3].get_text(strip=True).split("'")[0])
+                            seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
+                            decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
+                            race_time = minutes * 60 + seconds + decimal * 0.1
+                        except Exception:
+                            pass
                     match int(td_list[1].get_text(strip=True)):
                         case 1:
                             boat1_result_list[2] = result

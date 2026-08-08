@@ -24,7 +24,7 @@ def download(url, download_directory, start, end):
         },
     )
     driver = webdriver.Chrome(options=chrome_options)
-    wait = WebDriverWait(driver=driver, timeout=20)
+    wait = WebDriverWait(driver=driver, timeout=30)
     driver.get(url)
     wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
     select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))

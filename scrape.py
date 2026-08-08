@@ -554,17 +554,19 @@ def main():
                     td_list = tbody.find("tr").find_all("td")
                     result = None
                     try:
-                        result = int(td_list[0].get_text(strip=True))
+                        if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
+                            result = int(td_list[0].get_text(strip=True))
                     except Exception:
                         pass
                     race_time = None
-                    try:
-                        minutes = int(td_list[3].get_text(strip=True).split("'")[0])
-                        seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
-                        decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
-                        race_time = minutes * 60 + seconds + decimal * 0.1
-                    except Exception:
-                        pass
+                    if result is not None and result < 5:
+                        try:
+                            minutes = int(td_list[3].get_text(strip=True).split("'")[0])
+                            seconds = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[0])
+                            decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
+                            race_time = minutes * 60 + seconds + decimal * 0.1
+                        except Exception:
+                            pass
                     match int(td_list[1].get_text(strip=True)):
                         case 1:
                             boat1_result_list[2] = result
