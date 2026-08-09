@@ -1128,297 +1128,6 @@ def import_scraping_data(target_date: date):
     SESSION.commit()
 
 
-def scrape_race_and_racer(race_id: int):
-    _logger.info("Starting scrape_race_and_racer(): race_id=%s", race_id)
-
-    race = SESSION.query(Race).filter(Race.id == race_id).one()
-
-    url = f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-    try:
-        response = requests.get(url)
-    except Exception:
-        response = requests.get(url)
-    beautifulsoup = BeautifulSoup(response.text, "html.parser")
-
-    try:
-        classes = beautifulsoup.find("div", class_="heading2_title").get("class")
-        if "is-SGa" in classes:
-            race.grade = "SG"
-        elif "is-G1a" in classes:
-            race.grade = "PG1"
-        elif "is-G1b" in classes:
-            race.grade = "G1"
-        elif "is-G2b" in classes:
-            race.grade = "G2"
-        elif "is-G3b" in classes:
-            race.grade = "G3"
-        elif "is-ippan" in classes:
-            race.grade = "一般"
-        else:
-            pass
-    except Exception:
-        _logger.exception("Failed to scrape 'grade': race_id=%s", race_id)
-
-    try:
-        if (
-            beautifulsoup.find("li", class_="is-active2")
-            .find("span", class_="tab2_inner")
-            .find("span")
-            .get_text(strip=True)
-            == "最終日"
-        ):
-            race.is_last_day = 1
-        else:
-            race.is_last_day = 0
-    except Exception:
-        _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race_id)
-
-    try:
-        if (
-            beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
-            is not None
-        ):
-            race.has_stabilizer = 1
-        else:
-            race.has_stabilizer = 0
-    except Exception:
-        _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race_id)
-
-    racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
-
-    soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
-    for soup in soup_list:
-        soup_td_list = soup.find("tr").find_all("td")
-        soup_div_list = soup_td_list[2].find_all("div")
-        # boat number
-        boat_number = int(soup_td_list[0].get_text(strip=True))
-        # racer number, racer class
-        div0_text = soup_div_list[0].get_text(strip=True)
-        racer_number = int(div0_text.split("/")[0])
-        racer_class = div0_text.split("/")[1]
-        # branch, hometown, age, weight
-        div2_text = soup_div_list[2].get_text().replace("\n", "/").replace(" ", "")
-        branch = div2_text.split("/")[0]
-        hometown = None
-        if div2_text.split("/")[1] != "－":
-            hometown = div2_text.split("/")[1]
-        age = int(div2_text.split("/")[2].replace("歳", ""))
-        weight = None
-        if div2_text.split("/")[3].replace("kg", "") != "-":
-            weight = float(div2_text.split("/")[3].replace("kg", ""))
-        # f, l, st
-        td3_text = soup_td_list[3].get_text().replace(" ", "")
-        flying = int(td3_text.split("\n")[0].replace("F", ""))
-        late = int(td3_text.split("\n")[1].replace("L", ""))
-        average_start_timing = None
-        if td3_text.split("\n")[2] != "-":
-            average_start_timing = float(td3_text.split("\n")[2])
-        # all venue
-        td4_text = soup_td_list[4].get_text().replace(" ", "")
-        all_venue_win_rate = None
-        all_venue_top2_rate = None
-        all_venue_top3_rate = None
-        if td4_text.split("\n")[0] != "-":
-            all_venue_win_rate = float(td4_text.split("\n")[0])
-        if td4_text.split("\n")[1] != "-":
-            all_venue_top2_rate = float(td4_text.split("\n")[1])
-        if td4_text.split("\n")[2] != "-":
-            all_venue_top3_rate = float(td4_text.split("\n")[2])
-        # this venue
-        td5_text = soup_td_list[5].get_text().replace(" ", "")
-        this_venue_win_rate = None
-        this_venue_top2_rate = None
-        this_venue_top3_rate = None
-        if td5_text.split("\n")[0] != "-":
-            this_venue_win_rate = float(td5_text.split("\n")[0])
-        if td5_text.split("\n")[1] != "-":
-            this_venue_top2_rate = float(td5_text.split("\n")[1])
-        if td5_text.split("\n")[2] != "-":
-            this_venue_top3_rate = float(td5_text.split("\n")[2])
-        # motor
-        td6_text = soup_td_list[6].get_text().replace(" ", "")
-        motor_top2_rate = None
-        motor_top3_rate = None
-        if td6_text.split("\n")[1] != "-":
-            motor_top2_rate = float(td6_text.split("\n")[1])
-        if td6_text.split("\n")[2] != "-":
-            motor_top3_rate = float(td6_text.split("\n")[2])
-        # boat
-        td7_text = soup_td_list[7].get_text().replace(" ", "")
-        boat_top2_rate = None
-        boat_top3_rate = None
-        if td7_text.split("\n")[1] != "-":
-            boat_top2_rate = float(td7_text.split("\n")[1])
-        if td7_text.split("\n")[2] != "-":
-            boat_top3_rate = float(td7_text.split("\n")[2])
-
-        racer = racer_dict.get(boat_number)
-        if racer is not None:
-            racer.racer_number = racer_number
-            racer.racer_class = racer_class
-            racer.branch = branch
-            racer.hometown = hometown
-            racer.age = age
-            racer.weight = weight
-            racer.flying = flying
-            racer.late = late
-            racer.average_start_timing = average_start_timing
-            racer.all_venue_win_rate = all_venue_win_rate
-            racer.all_venue_top2_rate = all_venue_top2_rate
-            racer.all_venue_top3_rate = all_venue_top3_rate
-            racer.this_venue_win_rate = this_venue_win_rate
-            racer.this_venue_top2_rate = this_venue_top2_rate
-            racer.this_venue_top3_rate = this_venue_top3_rate
-            racer.motor_top2_rate = motor_top2_rate
-            racer.motor_top3_rate = motor_top3_rate
-            racer.boat_top2_rate = boat_top2_rate
-            racer.boat_top3_rate = boat_top3_rate
-        else:
-            SESSION.add(
-                Racer(
-                    race_id=race_id,
-                    boat_number=boat_number,
-                    racer_number=racer_number,
-                    racer_class=racer_class,
-                    branch=branch,
-                    hometown=hometown,
-                    age=age,
-                    weight=weight,
-                    flying=flying,
-                    late=late,
-                    average_start_timing=average_start_timing,
-                    all_venue_win_rate=all_venue_win_rate,
-                    all_venue_top2_rate=all_venue_top2_rate,
-                    all_venue_top3_rate=all_venue_top3_rate,
-                    this_venue_win_rate=this_venue_win_rate,
-                    this_venue_top2_rate=this_venue_top2_rate,
-                    this_venue_top3_rate=this_venue_top3_rate,
-                    motor_top2_rate=motor_top2_rate,
-                    motor_top3_rate=motor_top3_rate,
-                    boat_top2_rate=boat_top2_rate,
-                    boat_top3_rate=boat_top3_rate,
-                )
-            )
-
-    try:
-        SESSION.commit()
-    except SQLAlchemyError:
-        _logger.exception("Failed to commit scraped race and racer: race_id=%s", race_id)
-        SESSION.rollback()
-        raise
-
-
-def scrape_before_info(race_id: int):
-    _logger.info("Starting scrape_before_info(): race_id=%s", race_id)
-
-    race = SESSION.query(Race).filter(Race.id == race_id).one()
-
-    url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-    try:
-        response = requests.get(url)
-    except Exception:
-        response = requests.get(url)
-    beautifulsoup = BeautifulSoup(response.text, "html.parser")
-
-    soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-    # temperature
-    try:
-        race.before_info_temperature = float(
-            soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-        )
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race_id)
-    # weather
-    try:
-        race.before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race_id)
-    # wind speed
-    try:
-        race.before_info_wind_speed = int(
-            soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
-        )
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race_id)
-    # wind direction
-    try:
-        for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
-            if class_.startswith("is-wind"):
-                race.before_info_wind_direction = int(class_.replace("is-wind", ""))
-                break
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race_id)
-    # water temperature
-    try:
-        race.before_info_water_temperature = float(
-            soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
-        )
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race_id)
-    # wave height
-    try:
-        race.before_info_wave_height = int(
-            soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
-        )
-    except Exception:
-        _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race_id)
-
-    racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
-
-    for course, soup in enumerate(beautifulsoup.find("tbody", class_="is-p10-0").find_all("tr"), start=1):
-        boat_number_span = soup.find("span", class_="table1_boatImage1Number")
-        if boat_number_span is not None:
-            racer = racer_dict.get(int(boat_number_span.get_text(strip=True)))
-            if racer is not None:
-                racer.before_info_course = course
-                try:
-                    start_timing = soup.find("span", class_="table1_boatImage1Time").get_text(strip=True)
-                    if start_timing.startswith("F"):
-                        racer.before_info_start_timing = float(start_timing.replace("F", "-0"))
-                    elif start_timing.startswith("L"):
-                        racer.before_info_start_timing = float(start_timing.replace("L", "1"))
-                    else:
-                        racer.before_info_start_timing = float(start_timing)
-                    racer.before_info_start_timing_abs = abs(racer.before_info_start_timing)
-                except Exception:
-                    _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race_id)
-
-    for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
-        racer = racer_dict.get(boat_number)
-        if racer is not None:
-            for index, tr in enumerate(soup.find_all("tr")):
-                if index == 0:
-                    td_list = tr.find_all("td")
-                    try:
-                        racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
-                    except Exception:
-                        _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race_id)
-                    try:
-                        racer.before_info_display_time = float(td_list[4].get_text(strip=True))
-                    except Exception:
-                        _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
-                    try:
-                        racer.before_info_tilt = float(td_list[5].get_text(strip=True))
-                    except Exception:
-                        _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
-                elif index == 2:
-                    try:
-                        racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
-                    except Exception:
-                        _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race_id)
-                else:
-                    pass
-            if boat_number == 6:
-                break
-
-    try:
-        SESSION.commit()
-    except SQLAlchemyError:
-        _logger.exception("Failed to commit scraped before info: race_id=%s", race_id)
-        SESSION.rollback()
-        raise
-
-
 def calculate_z_scores(race_id: int):
     _logger.info("Starting calculate_z_scores(): race_id=%s", race_id)
 
@@ -2294,8 +2003,294 @@ def predict(race_id: int):
         if os.path.isfile(csv_path):
             os.remove(csv_path)
 
-        scrape_race_and_racer(race_id)
-        scrape_before_info(race_id)
+        race = SESSION.query(Race).filter(Race.id == race_id).one()
+
+        url = (
+            f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        )
+        try:
+            response = requests.get(url)
+        except Exception:
+            response = requests.get(url)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+
+        deadline_list = [
+            td.get_text(strip=True) for td in beautifulsoup.find("td", string="締切予定時刻").parent.find_all("td")[1:]
+        ]
+
+        try:
+            classes = beautifulsoup.find("div", class_="heading2_title").get("class")
+            if "is-SGa" in classes:
+                race.grade = "SG"
+            elif "is-G1a" in classes:
+                race.grade = "PG1"
+            elif "is-G1b" in classes:
+                race.grade = "G1"
+            elif "is-G2b" in classes:
+                race.grade = "G2"
+            elif "is-G3b" in classes:
+                race.grade = "G3"
+            elif "is-ippan" in classes:
+                race.grade = "一般"
+            else:
+                pass
+        except Exception:
+            _logger.exception("Failed to scrape 'grade': race_id=%s", race_id)
+
+        try:
+            if (
+                beautifulsoup.find("li", class_="is-active2")
+                .find("span", class_="tab2_inner")
+                .find("span")
+                .get_text(strip=True)
+                == "最終日"
+            ):
+                race.is_last_day = 1
+            else:
+                race.is_last_day = 0
+        except Exception:
+            _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race_id)
+
+        try:
+            if (
+                beautifulsoup.find("div", class_="title16_titleLabels__add2020").find("span", class_="label2 is-type1")
+                is not None
+            ):
+                race.has_stabilizer = 1
+            else:
+                race.has_stabilizer = 0
+        except Exception:
+            _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race_id)
+
+        racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
+
+        soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
+        for soup in soup_list:
+            soup_td_list = soup.find("tr").find_all("td")
+            soup_div_list = soup_td_list[2].find_all("div")
+            # boat number
+            boat_number = int(soup_td_list[0].get_text(strip=True))
+            # racer number, racer class
+            div0_text = soup_div_list[0].get_text(strip=True)
+            racer_number = int(div0_text.split("/")[0])
+            racer_class = div0_text.split("/")[1]
+            # branch, hometown, age, weight
+            div2_text = soup_div_list[2].get_text().replace("\n", "/").replace(" ", "")
+            branch = div2_text.split("/")[0]
+            hometown = None
+            if div2_text.split("/")[1] != "－":
+                hometown = div2_text.split("/")[1]
+            age = int(div2_text.split("/")[2].replace("歳", ""))
+            weight = None
+            if div2_text.split("/")[3].replace("kg", "") != "-":
+                weight = float(div2_text.split("/")[3].replace("kg", ""))
+            # f, l, st
+            td3_text = soup_td_list[3].get_text().replace(" ", "")
+            flying = int(td3_text.split("\n")[0].replace("F", ""))
+            late = int(td3_text.split("\n")[1].replace("L", ""))
+            average_start_timing = None
+            if td3_text.split("\n")[2] != "-":
+                average_start_timing = float(td3_text.split("\n")[2])
+            # all venue
+            td4_text = soup_td_list[4].get_text().replace(" ", "")
+            all_venue_win_rate = None
+            all_venue_top2_rate = None
+            all_venue_top3_rate = None
+            if td4_text.split("\n")[0] != "-":
+                all_venue_win_rate = float(td4_text.split("\n")[0])
+            if td4_text.split("\n")[1] != "-":
+                all_venue_top2_rate = float(td4_text.split("\n")[1])
+            if td4_text.split("\n")[2] != "-":
+                all_venue_top3_rate = float(td4_text.split("\n")[2])
+            # this venue
+            td5_text = soup_td_list[5].get_text().replace(" ", "")
+            this_venue_win_rate = None
+            this_venue_top2_rate = None
+            this_venue_top3_rate = None
+            if td5_text.split("\n")[0] != "-":
+                this_venue_win_rate = float(td5_text.split("\n")[0])
+            if td5_text.split("\n")[1] != "-":
+                this_venue_top2_rate = float(td5_text.split("\n")[1])
+            if td5_text.split("\n")[2] != "-":
+                this_venue_top3_rate = float(td5_text.split("\n")[2])
+            # motor
+            td6_text = soup_td_list[6].get_text().replace(" ", "")
+            motor_top2_rate = None
+            motor_top3_rate = None
+            if td6_text.split("\n")[1] != "-":
+                motor_top2_rate = float(td6_text.split("\n")[1])
+            if td6_text.split("\n")[2] != "-":
+                motor_top3_rate = float(td6_text.split("\n")[2])
+            # boat
+            td7_text = soup_td_list[7].get_text().replace(" ", "")
+            boat_top2_rate = None
+            boat_top3_rate = None
+            if td7_text.split("\n")[1] != "-":
+                boat_top2_rate = float(td7_text.split("\n")[1])
+            if td7_text.split("\n")[2] != "-":
+                boat_top3_rate = float(td7_text.split("\n")[2])
+
+            racer = racer_dict.get(boat_number)
+            if racer is not None:
+                racer.racer_number = racer_number
+                racer.racer_class = racer_class
+                racer.branch = branch
+                racer.hometown = hometown
+                racer.age = age
+                racer.weight = weight
+                racer.flying = flying
+                racer.late = late
+                racer.average_start_timing = average_start_timing
+                racer.all_venue_win_rate = all_venue_win_rate
+                racer.all_venue_top2_rate = all_venue_top2_rate
+                racer.all_venue_top3_rate = all_venue_top3_rate
+                racer.this_venue_win_rate = this_venue_win_rate
+                racer.this_venue_top2_rate = this_venue_top2_rate
+                racer.this_venue_top3_rate = this_venue_top3_rate
+                racer.motor_top2_rate = motor_top2_rate
+                racer.motor_top3_rate = motor_top3_rate
+                racer.boat_top2_rate = boat_top2_rate
+                racer.boat_top3_rate = boat_top3_rate
+            else:
+                SESSION.add(
+                    Racer(
+                        race_id=race_id,
+                        boat_number=boat_number,
+                        racer_number=racer_number,
+                        racer_class=racer_class,
+                        branch=branch,
+                        hometown=hometown,
+                        age=age,
+                        weight=weight,
+                        flying=flying,
+                        late=late,
+                        average_start_timing=average_start_timing,
+                        all_venue_win_rate=all_venue_win_rate,
+                        all_venue_top2_rate=all_venue_top2_rate,
+                        all_venue_top3_rate=all_venue_top3_rate,
+                        this_venue_win_rate=this_venue_win_rate,
+                        this_venue_top2_rate=this_venue_top2_rate,
+                        this_venue_top3_rate=this_venue_top3_rate,
+                        motor_top2_rate=motor_top2_rate,
+                        motor_top3_rate=motor_top3_rate,
+                        boat_top2_rate=boat_top2_rate,
+                        boat_top3_rate=boat_top3_rate,
+                    )
+                )
+
+        try:
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception("Failed to commit scraped race and racer: race_id=%s", race_id)
+            SESSION.rollback()
+            raise
+
+        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        try:
+            response = requests.get(url)
+        except Exception:
+            response = requests.get(url)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+
+        soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
+        # temperature
+        try:
+            race.before_info_temperature = float(
+                soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race_id)
+        # weather
+        try:
+            race.before_info_weather = (
+                soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
+            )
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race_id)
+        # wind speed
+        try:
+            race.before_info_wind_speed = int(
+                soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
+            )
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race_id)
+        # wind direction
+        try:
+            for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
+                if class_.startswith("is-wind"):
+                    race.before_info_wind_direction = int(class_.replace("is-wind", ""))
+                    break
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race_id)
+        # water temperature
+        try:
+            race.before_info_water_temperature = float(
+                soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
+            )
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race_id)
+        # wave height
+        try:
+            race.before_info_wave_height = int(
+                soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
+            )
+        except Exception:
+            _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race_id)
+
+        racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
+
+        for course, soup in enumerate(beautifulsoup.find("tbody", class_="is-p10-0").find_all("tr"), start=1):
+            boat_number_span = soup.find("span", class_="table1_boatImage1Number")
+            if boat_number_span is not None:
+                racer = racer_dict.get(int(boat_number_span.get_text(strip=True)))
+                if racer is not None:
+                    racer.before_info_course = course
+                    try:
+                        start_timing = soup.find("span", class_="table1_boatImage1Time").get_text(strip=True)
+                        if start_timing.startswith("F"):
+                            racer.before_info_start_timing = float(start_timing.replace("F", "-0"))
+                        elif start_timing.startswith("L"):
+                            racer.before_info_start_timing = float(start_timing.replace("L", "1"))
+                        else:
+                            racer.before_info_start_timing = float(start_timing)
+                        racer.before_info_start_timing_abs = abs(racer.before_info_start_timing)
+                    except Exception:
+                        _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race_id)
+
+        for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
+            racer = racer_dict.get(boat_number)
+            if racer is not None:
+                for index, tr in enumerate(soup.find_all("tr")):
+                    if index == 0:
+                        td_list = tr.find_all("td")
+                        try:
+                            racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
+                        except Exception:
+                            _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race_id)
+                        try:
+                            racer.before_info_display_time = float(td_list[4].get_text(strip=True))
+                        except Exception:
+                            _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
+                        try:
+                            racer.before_info_tilt = float(td_list[5].get_text(strip=True))
+                        except Exception:
+                            _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
+                    elif index == 2:
+                        try:
+                            racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
+                        except Exception:
+                            _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race_id)
+                    else:
+                        pass
+                if boat_number == 6:
+                    break
+
+        try:
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception("Failed to commit scraped before info: race_id=%s", race_id)
+            SESSION.rollback()
+            raise
 
         calculate_z_scores(race_id)
         calculate_stats(race_id)
@@ -2364,9 +2359,9 @@ def predict(race_id: int):
                     SESSION.rollback()
                     raise
 
-                deadline = datetime.strptime(race.deadline, "%H:%M")
-                deadline_before_65_seconds = deadline - timedelta(seconds=65)
-                schedule.every().day.at(deadline_before_65_seconds.strftime("%H:%M:%S")).do(
+                deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
+                deadline_before_70_seconds = deadline - timedelta(seconds=70)
+                schedule.every().day.at(deadline_before_70_seconds.strftime("%H:%M:%S")).do(
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
