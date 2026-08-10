@@ -58,8 +58,8 @@ def run_thread(target):
     thread.start()
 
 
-def download(url, target_date: date):
-    _logger.info("Starting download(): target_date=%s", target_date.strftime("%Y%m%d"))
+def download(target_date: date, url: str):
+    _logger.info(f'Starting download(): target_date={target_date.strftime("%Y%m%d")}, url="{url}"')
 
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
@@ -102,7 +102,7 @@ def download(url, target_date: date):
                 break
         time_module.sleep(5)
     except Exception:
-        _logger.exception("Failed to download official data: target_date=%s", target_date.strftime("%Y%m%d"))
+        _logger.exception(f"Failed to download official data: target_date={target_date.strftime('%Y%m%d')}")
         raise
     finally:
         try:
@@ -112,7 +112,7 @@ def download(url, target_date: date):
 
 
 def import_race_data(target_date: date):
-    _logger.info("Starting import_race_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+    _logger.info(f"Starting import_race_data(): target_date={target_date.strftime('%Y%m%d')}")
 
     with open(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932") as f:
         venue = None
@@ -167,13 +167,13 @@ def import_race_data(target_date: date):
         try:
             SESSION.commit()
         except SQLAlchemyError:
-            _logger.exception("Failed to commit imported race data: target_date=%s", target_date.strftime("%Y%m%d"))
+            _logger.exception(f"Failed to commit imported race data: target_date={target_date.strftime('%Y%m%d')}")
             SESSION.rollback()
             raise
 
 
 def import_result_data(target_date: date):
-    _logger.info("Starting import_result_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+    _logger.info(f"Starting import_result_data(): target_date={target_date.strftime('%Y%m%d')}")
 
     with open(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
         date_ = target_date.strftime("%Y%m%d")
@@ -306,13 +306,13 @@ def import_result_data(target_date: date):
         try:
             SESSION.commit()
         except SQLAlchemyError:
-            _logger.exception("Failed to commit imported result data: target_date=%s", target_date.strftime("%Y%m%d"))
+            _logger.exception(f"Failed to commit imported result data: target_date={target_date.strftime('%Y%m%d')}")
             SESSION.rollback()
             raise
 
 
 def scrape(target_date: date):
-    _logger.info("Starting scrape(): target_date=%s", target_date.strftime("%Y%m%d"))
+    _logger.info(f"Starting scrape(): target_date={target_date.strftime('%Y%m%d')}")
 
     race_list = (
         SESSION.query(Race)
@@ -361,7 +361,7 @@ def scrape(target_date: date):
             else:
                 pass
         except Exception:
-            _logger.exception("Failed to scrape 'grade': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'grade': race_id={race.id}")
 
         is_last_day = None
         try:
@@ -376,7 +376,7 @@ def scrape(target_date: date):
             else:
                 is_last_day = 0
         except Exception:
-            _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'is_last_day': race_id={race.id}")
 
         has_stabilizer = None
         try:
@@ -388,7 +388,7 @@ def scrape(target_date: date):
             else:
                 has_stabilizer = 0
         except Exception:
-            _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'has_stabilizer': race_id={race.id}")
 
         soup_list = beautifulsoup.find_all("tbody", class_="is-fs12")
         for soup in soup_list:
@@ -502,19 +502,19 @@ def scrape(target_date: date):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_temperature': race_id={race.id}")
         # weather
         try:
             before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_weather': race_id={race.id}")
         # wind speed
         try:
             before_info_wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_wind_speed': race_id={race.id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -522,21 +522,21 @@ def scrape(target_date: date):
                     before_info_wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_wind_direction': race_id={race.id}")
         # water temperature
         try:
             before_info_water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_water_temperature': race_id={race.id}")
         # wave height
         try:
             before_info_wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'before_info_wave_height': race_id={race.id}")
 
         # course
         # start timing
@@ -598,7 +598,7 @@ def scrape(target_date: date):
                         case _:
                             pass
                 except Exception:
-                    _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race.id)
+                    _logger.exception(f"Failed to scrape 'before_info_start_timing': race_id={race.id}")
 
         for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
             for index, tr in enumerate(soup.find_all("tr")):
@@ -622,7 +622,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race.id)
+                        _logger.exception(f"Failed to scrape 'before_info_weight': race_id={race.id}")
                     # display time
                     try:
                         match boat_number:
@@ -641,7 +641,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.warning("Failed to scrape 'before_info_display_time': race_id=%s", race.id)
+                        _logger.warning(f"Failed to scrape 'before_info_display_time': race_id={race.id}")
                     # tilt
                     try:
                         match boat_number:
@@ -660,7 +660,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.warning("Failed to scrape 'before_info_tilt': race_id=%s", race.id)
+                        _logger.warning(f"Failed to scrape 'before_info_tilt': race_id={race.id}")
                 elif index == 2:
                     # adjusted weight
                     try:
@@ -680,7 +680,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race.id)
+                        _logger.exception(f"Failed to scrape 'before_info_adjusted_weight': race_id={race.id}")
                 else:
                     pass
             if boat_number == 6:
@@ -725,19 +725,19 @@ def scrape(target_date: date):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'temperature': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'temperature': race_id={race.id}")
         # weather
         try:
             weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            _logger.exception("Failed to scrape 'weather': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'weather': race_id={race.id}")
         # wind speed
         try:
             wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'wind_speed': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'wind_speed': race_id={race.id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -745,21 +745,21 @@ def scrape(target_date: date):
                     wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception("Failed to scrape 'wind_direction': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'wind_direction': race_id={race.id}")
         # water temperature
         try:
             water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'water_temperature': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'water_temperature': race_id={race.id}")
         # wave height
         try:
             wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'wave_height': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'wave_height': race_id={race.id}")
 
         # winning style
         try:
@@ -767,7 +767,7 @@ def scrape(target_date: date):
                 beautifulsoup.find("table", class_="is-h108__3rdadd").find("td", class_="is-fs16").get_text(strip=True)
             )
         except Exception:
-            _logger.exception("Failed to scrape 'winning_style': race_id=%s", race.id)
+            _logger.exception(f"Failed to scrape 'winning_style': race_id={race.id}")
 
         # course
         # start timing
@@ -831,7 +831,7 @@ def scrape(target_date: date):
                         case _:
                             pass
                 except Exception:
-                    _logger.exception("Failed to scrape 'start_timing': race_id=%s", race.id)
+                    _logger.exception(f"Failed to scrape 'start_timing': race_id={race.id}")
 
         # result
         # race time
@@ -845,7 +845,7 @@ def scrape(target_date: date):
                         if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
                             result = int(td_list[0].get_text(strip=True))
                     except Exception:
-                        _logger.exception("Failed to scrape 'result': race_id=%s", race.id)
+                        _logger.exception(f"Failed to scrape 'result': race_id={race.id}")
                     race_time = None
                     if result is not None and result < 5:
                         try:
@@ -854,7 +854,7 @@ def scrape(target_date: date):
                             decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
                             race_time = minutes * 60 + seconds + decimal * 0.1
                         except Exception:
-                            _logger.exception("Failed to scrape 'race_time': race_id=%s", race.id)
+                            _logger.exception(f"Failed to scrape 'race_time': race_id={race.id}")
                     match int(td_list[1].get_text(strip=True)):
                         case 1:
                             boat1_result_list[2] = result
@@ -954,7 +954,7 @@ def scrape(target_date: date):
 
 
 def import_scraping_data(target_date: date):
-    _logger.info("Starting import_scraping_data(): target_date=%s", target_date.strftime("%Y%m%d"))
+    _logger.info(f"Starting import_scraping_data(): target_date={target_date.strftime('%Y%m%d')}")
 
     with open(
         os.path.join(os.getcwd(), "temp", f"race_{target_date.strftime('%Y%m%d')}.csv"), "r", encoding="UTF-8"
@@ -982,9 +982,7 @@ def import_scraping_data(target_date: date):
     try:
         SESSION.commit()
     except SQLAlchemyError:
-        _logger.exception(
-            "Failed to commit imported scraping race data: target_date=%s", target_date.strftime("%Y%m%d")
-        )
+        _logger.exception(f"Failed to commit imported scraping race data: target_date={target_date.strftime('%Y%m%d')}")
         SESSION.rollback()
         raise
 
@@ -1071,7 +1069,7 @@ def import_scraping_data(target_date: date):
             SESSION.commit()
         except SQLAlchemyError:
             _logger.exception(
-                "Failed to commit imported scraping racer data: target_date=%s", target_date.strftime("%Y%m%d")
+                f"Failed to commit imported scraping racer data: target_date={target_date.strftime('%Y%m%d')}"
             )
             SESSION.rollback()
             raise
@@ -1129,7 +1127,7 @@ def import_scraping_data(target_date: date):
 
 
 def calculate_z_scores(race_id: int):
-    _logger.info("Starting calculate_z_scores(): race_id=%s", race_id)
+    _logger.info(f"Starting calculate_z_scores(): race_id={race_id}")
 
     racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).order_by(Racer.boat_number.asc()).all()
 
@@ -1331,13 +1329,13 @@ def calculate_z_scores(race_id: int):
     try:
         SESSION.commit()
     except SQLAlchemyError:
-        _logger.exception("Failed to commit calculated z-scores: race_id=%s", race_id)
+        _logger.exception(f"Failed to commit calculated z-scores: race_id={race_id}")
         SESSION.rollback()
         raise
 
 
 def calculate_stats(race_id: int):
-    _logger.info("Starting calculate_stats(): race_id=%s", race_id)
+    _logger.info(f"Starting calculate_stats(): race_id={race_id}")
 
     racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).order_by(Racer.boat_number.asc()).all()
     for racer in racer_list:
@@ -1428,13 +1426,13 @@ def calculate_stats(race_id: int):
     try:
         SESSION.commit()
     except SQLAlchemyError:
-        _logger.exception("Failed to commit calculated stats: race_id=%s", race_id)
+        _logger.exception(f"Failed to commit calculated stats: race_id={race_id}")
         SESSION.rollback()
         raise
 
 
 def output_predict_race_data(race: Race):
-    _logger.info("Starting output_predict_race_data(): race_id=%s", race.id)
+    _logger.info(f"Starting output_predict_race_data(): race_id={race.id}")
 
     racer_list = (
         SESSION.query(Racer)
@@ -1995,7 +1993,7 @@ def output_predict_race_data(race: Race):
 
 
 def predict(race_id: int):
-    _logger.info("Starting predict(): race_id=%s", race_id)
+    _logger.info(f"Starting predict(): race_id={race_id}")
 
     try:
         csv_path = os.path.join(os.getcwd(), "temp", f"{race_id}.csv")
@@ -2035,7 +2033,7 @@ def predict(race_id: int):
             else:
                 pass
         except Exception:
-            _logger.exception("Failed to scrape 'grade': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'grade': race_id={race_id}")
 
         try:
             if (
@@ -2049,7 +2047,7 @@ def predict(race_id: int):
             else:
                 race.is_last_day = 0
         except Exception:
-            _logger.exception("Failed to scrape 'is_last_day': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'is_last_day': race_id={race_id}")
 
         try:
             if (
@@ -2060,7 +2058,7 @@ def predict(race_id: int):
             else:
                 race.has_stabilizer = 0
         except Exception:
-            _logger.exception("Failed to scrape 'has_stabilizer': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'has_stabilizer': race_id={race_id}")
 
         racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
 
@@ -2181,7 +2179,7 @@ def predict(race_id: int):
         try:
             SESSION.commit()
         except SQLAlchemyError:
-            _logger.exception("Failed to commit scraped race and racer: race_id=%s", race_id)
+            _logger.exception(f"Failed to commit scraped race and racer: race_id={race_id}")
             SESSION.rollback()
             raise
 
@@ -2199,21 +2197,21 @@ def predict(race_id: int):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_temperature': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_temperature': race_id={race_id}")
         # weather
         try:
             race.before_info_weather = (
                 soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_weather': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_weather': race_id={race_id}")
         # wind speed
         try:
             race.before_info_wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wind_speed': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_wind_speed': race_id={race_id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -2221,21 +2219,21 @@ def predict(race_id: int):
                     race.before_info_wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wind_direction': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_wind_direction': race_id={race_id}")
         # water temperature
         try:
             race.before_info_water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_water_temperature': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_water_temperature': race_id={race_id}")
         # wave height
         try:
             race.before_info_wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception("Failed to scrape 'before_info_wave_height': race_id=%s", race_id)
+            _logger.exception(f"Failed to scrape 'before_info_wave_height': race_id={race_id}")
 
         racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
 
@@ -2255,7 +2253,7 @@ def predict(race_id: int):
                             racer.before_info_start_timing = float(start_timing)
                         racer.before_info_start_timing_abs = abs(racer.before_info_start_timing)
                     except Exception:
-                        _logger.exception("Failed to scrape 'before_info_start_timing': race_id=%s", race_id)
+                        _logger.exception(f"Failed to scrape 'before_info_start_timing': race_id={race_id}")
 
         for boat_number, soup in enumerate(beautifulsoup.find_all("tbody", class_="is-fs12"), start=1):
             racer = racer_dict.get(boat_number)
@@ -2266,20 +2264,20 @@ def predict(race_id: int):
                         try:
                             racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
                         except Exception:
-                            _logger.exception("Failed to scrape 'before_info_weight': race_id=%s", race_id)
+                            _logger.exception(f"Failed to scrape 'before_info_weight': race_id={race_id}")
                         try:
                             racer.before_info_display_time = float(td_list[4].get_text(strip=True))
                         except Exception:
-                            _logger.warning("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
+                            _logger.warning(f"Failed to scrape 'before_info_display_time': race_id={race_id}")
                         try:
                             racer.before_info_tilt = float(td_list[5].get_text(strip=True))
                         except Exception:
-                            _logger.warning("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
+                            _logger.warning(f"Failed to scrape 'before_info_tilt': race_id={race_id}")
                     elif index == 2:
                         try:
                             racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
                         except Exception:
-                            _logger.exception("Failed to scrape 'before_info_adjusted_weight': race_id=%s", race_id)
+                            _logger.exception(f"Failed to scrape 'before_info_adjusted_weight': race_id={race_id}")
                     else:
                         pass
                 if boat_number == 6:
@@ -2288,7 +2286,7 @@ def predict(race_id: int):
         try:
             SESSION.commit()
         except SQLAlchemyError:
-            _logger.exception("Failed to commit scraped before info: race_id=%s", race_id)
+            _logger.exception(f"Failed to commit scraped before info: race_id={race_id}")
             SESSION.rollback()
             raise
 
@@ -2355,7 +2353,7 @@ def predict(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
-                    _logger.exception("Failed to commit predicted tickets: race_id=%s", race_id)
+                    _logger.exception(f"Failed to commit predicted tickets: race_id={race_id}")
                     SESSION.rollback()
                     raise
 
@@ -2365,14 +2363,14 @@ def predict(race_id: int):
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
-        _logger.exception("Failed to predict: race_id=%s", race_id)
+        _logger.exception(f"Failed to predict: race_id={race_id}")
         SESSION.rollback()
     finally:
         SESSION.remove()
 
 
 def bet(race_id: int):
-    _logger.info("Starting bet(): race_id=%s", race_id)
+    _logger.info(f"Starting bet(): race_id={race_id}")
 
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
@@ -2440,7 +2438,7 @@ def bet(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
-                    _logger.exception("Failed to commit before deadline odds: race_id=%s", race_id)
+                    _logger.exception(f"Failed to commit before deadline odds: race_id={race_id}")
                     SESSION.rollback()
                     raise
 
@@ -2473,7 +2471,7 @@ def bet(race_id: int):
                 try:
                     SESSION.commit()
                 except SQLAlchemyError:
-                    _logger.exception("Failed to commit expected values: race_id=%s", race_id)
+                    _logger.exception(f"Failed to commit expected values: race_id={race_id}")
                     SESSION.rollback()
                     raise
 
@@ -2526,10 +2524,10 @@ def bet(race_id: int):
                     try:
                         SESSION.commit()
                     except SQLAlchemyError:
-                        _logger.exception("Failed to commit bets: race_id=%s", race_id)
+                        _logger.exception(f"Failed to commit bets: race_id={race_id}")
                         SESSION.rollback()
     except Exception:
-        _logger.exception("Failed to bet: race_id=%s", race_id)
+        _logger.exception(f"Failed to bet: race_id={race_id}")
         SESSION.rollback()
     finally:
         try:
@@ -2540,7 +2538,7 @@ def bet(race_id: int):
 
 
 def save_result(race_id):
-    _logger.info("Starting save_result(): race_id=%s", race_id)
+    _logger.info(f"Starting save_result(): race_id={race_id}")
 
     try:
         race = SESSION.query(Race).filter(Race.id == race_id).one()
@@ -2588,19 +2586,19 @@ def save_result(race_id):
                     soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
                 )
             except Exception:
-                _logger.exception("Failed to scrape 'temperature': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'temperature': race_id={race_id}")
             # weather
             try:
                 race.weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
             except Exception:
-                _logger.exception("Failed to scrape 'weather': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'weather': race_id={race_id}")
             # wind speed
             try:
                 race.wind_speed = int(
                     soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
                 )
             except Exception:
-                _logger.exception("Failed to scrape 'wind_speed': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'wind_speed': race_id={race_id}")
             # wind direction
             try:
                 for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -2608,14 +2606,14 @@ def save_result(race_id):
                         race.wind_direction = int(class_.replace("is-wind", ""))
                         break
             except Exception:
-                _logger.exception("Failed to scrape 'wind_direction': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'wind_direction': race_id={race_id}")
             # water temperature
             try:
                 race.water_temperature = float(
                     soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
                 )
             except Exception:
-                _logger.exception("Failed to scrape 'water_temperature': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'water_temperature': race_id={race_id}")
             # wave height
             try:
                 race.wave_height = int(
@@ -2625,7 +2623,7 @@ def save_result(race_id):
                     .replace("cm", "")
                 )
             except Exception:
-                _logger.exception("Failed to scrape 'wave_height': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'wave_height': race_id={race_id}")
 
             # winning style
             try:
@@ -2635,7 +2633,7 @@ def save_result(race_id):
                     .get_text(strip=True)
                 )
             except Exception:
-                _logger.exception("Failed to scrape 'winning_style': race_id=%s", race_id)
+                _logger.exception(f"Failed to scrape 'winning_style': race_id={race_id}")
 
             racer_dict = {
                 racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()
@@ -2662,7 +2660,7 @@ def save_result(race_id):
                             else:
                                 racer.start_timing = float(start_timing)
                         except Exception:
-                            _logger.exception("Failed to scrape 'start_timing': race_id=%s", race_id)
+                            _logger.exception(f"Failed to scrape 'start_timing': race_id={race_id}")
 
             # result
             # race time
@@ -2676,12 +2674,12 @@ def save_result(race_id):
                             if td_list[0].get_text(strip=True) in ["１", "２", "３", "４", "５", "６"]:
                                 result = int(td_list[0].get_text(strip=True))
                         except Exception:
-                            _logger.exception("Failed to scrape 'result': race_id=%s", race_id)
+                            _logger.exception(f"Failed to scrape 'result': race_id={race_id}")
                         boat_number = None
                         try:
                             boat_number = int(td_list[1].get_text(strip=True))
                         except Exception:
-                            _logger.exception("Failed to scrape 'boat_number': race_id=%s", race_id)
+                            _logger.exception(f"Failed to scrape 'boat_number': race_id={race_id}")
                         race_time = None
                         if result is not None and result < 5:
                             try:
@@ -2690,7 +2688,7 @@ def save_result(race_id):
                                 decimal = int(td_list[3].get_text(strip=True).split("'")[1].split('"')[1])
                                 race_time = minutes * 60 + seconds + decimal * 0.1
                             except Exception:
-                                _logger.exception("Failed to scrape 'race_time': race_id=%s", race_id)
+                                _logger.exception(f"Failed to scrape 'race_time': race_id={race_id}")
                         if result is not None and boat_number is not None:
                             racer = racer_dict.get(boat_number)
                             if racer is not None:
@@ -2699,7 +2697,7 @@ def save_result(race_id):
                     break
         SESSION.commit()
     except Exception:
-        _logger.exception("Failed to save result: race_id=%s", race_id)
+        _logger.exception(f"Failed to save result: race_id={race_id}")
         SESSION.rollback()
     finally:
         SESSION.remove()
@@ -2787,9 +2785,9 @@ def daily():
         _logger.exception("Failed to clean 'temp' directory.")
 
     try:
-        download("https://www1.mbrace.or.jp/od2/B/dindex.html", today)
-        download("https://www1.mbrace.or.jp/od2/B/dindex.html", yesterday)
-        download("https://www1.mbrace.or.jp/od2/K/dindex.html", yesterday)
+        download(today, "https://www1.mbrace.or.jp/od2/B/dindex.html")
+        download(yesterday, "https://www1.mbrace.or.jp/od2/B/dindex.html")
+        download(yesterday, "https://www1.mbrace.or.jp/od2/K/dindex.html")
 
         for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
             file_path = os.path.join(os.path.join(os.getcwd(), "temp"), file_name)
