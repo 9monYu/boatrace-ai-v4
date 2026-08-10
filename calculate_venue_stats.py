@@ -1,6 +1,5 @@
 from datetime import date
 
-import numpy
 from tqdm import tqdm
 
 from constants import SESSION

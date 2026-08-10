@@ -4,7 +4,7 @@ import numpy
 from tqdm import tqdm
 
 from constants import SESSION
-from models import Race, Racer, VenueStat
+from models import Race, Racer
 
 
 def main():
