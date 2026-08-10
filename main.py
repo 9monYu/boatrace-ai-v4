@@ -641,7 +641,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race.id)
+                        _logger.warning("Failed to scrape 'before_info_display_time': race_id=%s", race.id)
                     # tilt
                     try:
                         match boat_number:
@@ -660,7 +660,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race.id)
+                        _logger.warning("Failed to scrape 'before_info_tilt': race_id=%s", race.id)
                 elif index == 2:
                     # adjusted weight
                     try:
@@ -2270,11 +2270,11 @@ def predict(race_id: int):
                         try:
                             racer.before_info_display_time = float(td_list[4].get_text(strip=True))
                         except Exception:
-                            _logger.exception("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
+                            _logger.warning("Failed to scrape 'before_info_display_time': race_id=%s", race_id)
                         try:
                             racer.before_info_tilt = float(td_list[5].get_text(strip=True))
                         except Exception:
-                            _logger.exception("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
+                            _logger.warning("Failed to scrape 'before_info_tilt': race_id=%s", race_id)
                     elif index == 2:
                         try:
                             racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
