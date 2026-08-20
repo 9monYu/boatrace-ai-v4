@@ -1,12 +1,13 @@
 import argparse
 import csv
 import os
+import time
 from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
 
-from constants import SESSION
+from constants import REQUEST_HEADERS, SESSION
 from models import Race
 
 
@@ -46,13 +47,20 @@ def main():
         ]
 
         # race and racer
-        url = (
-            f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        )
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         grade = None
@@ -185,11 +193,20 @@ def main():
                 racer_list[racer_index].append(None)
 
         # before info
-        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         before_info_temperature = None
@@ -406,11 +423,20 @@ def main():
         racer_list[5].extend(boat6_before_info_list)
 
         # result
-        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         temperature = None
@@ -637,11 +663,20 @@ def main():
                 writer.writerow(racer)
 
         # deadline odds
-        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
         soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
         odds_list = []
@@ -663,6 +698,8 @@ def main():
         ) as f:
             writer = csv.writer(f)
             writer.writerow(odds_list)
+
+        time.sleep(5)
 
 
 if __name__ == "__main__":

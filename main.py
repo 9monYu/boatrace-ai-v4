@@ -39,6 +39,7 @@ from constants import (
     CSV_COLUMN_LIST,
     GRADE_LIST,
     RACER_CLASS_LIST,
+    REQUEST_HEADERS,
     SEED_COUNT,
     SESSION,
     TRIFECTA_LIST,
@@ -49,7 +50,7 @@ from models import PeriodStat, Race, Racer, Ticket, VenueStat
 
 _logger = logging.getLogger(__name__)
 
-DAILY_TIME = "04:00"
+DAILY_TIME = "06:00"
 CHARGE_TIME = "08:00"
 
 
@@ -334,13 +335,20 @@ def scrape(target_date: date):
         ]
 
         # race and racer
-        url = (
-            f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        )
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         grade = None
@@ -473,11 +481,20 @@ def scrape(target_date: date):
                 racer_list[racer_index].append(None)
 
         # before info
-        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         before_info_temperature = None
@@ -694,11 +711,20 @@ def scrape(target_date: date):
         racer_list[5].extend(boat6_before_info_list)
 
         # result
-        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         temperature = None
@@ -925,11 +951,20 @@ def scrape(target_date: date):
                 writer.writerow(racer)
 
         # deadline odds
-        url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
         soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
         odds_list = []
@@ -951,6 +986,8 @@ def scrape(target_date: date):
         ) as f:
             writer = csv.writer(f)
             writer.writerow(odds_list)
+
+        time_module.sleep(5)
 
 
 def import_scraping_data(target_date: date):
@@ -2003,11 +2040,20 @@ def predict(race_id: int):
 
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
-        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
         soup = beautifulsoup.find("h3", class_="title12_title is-type1")
         if soup is not None and soup.text == "レース中止":
@@ -2045,13 +2091,20 @@ def predict(race_id: int):
                 raise
             return
 
-        url = (
-            f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        )
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         deadline_list = [
@@ -2225,11 +2278,20 @@ def predict(race_id: int):
             SESSION.rollback()
             raise
 
-        url = f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
 
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
@@ -2400,8 +2462,8 @@ def predict(race_id: int):
                     raise
 
                 deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
-                deadline_before_70_seconds = deadline - timedelta(seconds=70)
-                schedule.every().day.at(deadline_before_70_seconds.strftime("%H:%M:%S")).do(
+                deadline_before_65_seconds = deadline - timedelta(seconds=65)
+                schedule.every().day.at(deadline_before_65_seconds.strftime("%H:%M:%S")).do(
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
@@ -2449,11 +2511,19 @@ def bet(race_id: int):
                 EC.presence_of_element_located((By.ID, f"selRaceNo{str(race.race_number).zfill(2)}"))
             )
             if "current" in sel_race_no_element.get_attribute("class"):
-                url = f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-                try:
-                    response = requests.get(url)
-                except Exception:
-                    response = requests.get(url)
+                for retry in range(2):
+                    try:
+                        response = requests.get(
+                            f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                            headers=REQUEST_HEADERS,
+                            timeout=2,
+                        )
+                        response.raise_for_status()
+                        break
+                    except requests.RequestException:
+                        if retry == 1:
+                            raise
+
                 beautifulsoup = BeautifulSoup(response.text, "html.parser")
                 soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
                 for index, soup in enumerate(soup_list):
@@ -2562,7 +2632,10 @@ def bet(race_id: int):
                     wait.until(EC.element_to_be_clickable((By.ID, "pass"))).send_keys(BET_PASSWORD)
                     wait.until(EC.element_to_be_clickable((By.ID, "submitBet"))).click()
                     wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
-                    time_module.sleep(5)
+                    for bet_ticket in bet_ticket_list:
+                        _logger.info(
+                            f"BET: race_id={bet_ticket.race_id}, trifecta={bet_ticket.first}-{bet_ticket.second}-{bet_ticket.third}, amount={bet_ticket.bet_amount}"
+                        )
                     try:
                         SESSION.commit()
                     except SQLAlchemyError:
@@ -2585,11 +2658,20 @@ def save_result(race_id):
     try:
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
-        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
-        try:
-            response = requests.get(url)
-        except Exception:
-            response = requests.get(url)
+        for retry in range(3):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 2:
+                    raise
+                time_module.sleep(5)
+
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
         soup = beautifulsoup.find("h3", class_="title12_title is-type1")
         if soup is not None and soup.text == "レース中止":
