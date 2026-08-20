@@ -2003,6 +2003,48 @@ def predict(race_id: int):
 
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
+        url = f"https://www.boatrace.jp/owpc/pc/race/raceresult?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
+        try:
+            response = requests.get(url)
+        except Exception:
+            response = requests.get(url)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+        soup = beautifulsoup.find("h3", class_="title12_title is-type1")
+        if soup is not None and soup.text == "レース中止":
+            race.is_cancel = 1
+            race.grade = None
+            race.is_last_day = None
+            race.has_stabilizer = None
+            race.before_info_temperature = None
+            race.before_info_weather = None
+            race.before_info_wind_speed = None
+            race.before_info_wind_direction = None
+            race.before_info_water_temperature = None
+            race.before_info_wave_height = None
+            race.temperature = None
+            race.weather = None
+            race.wind_speed = None
+            race.wind_direction = None
+            race.water_temperature = None
+            race.wave_height = None
+            race.first = None
+            race.second = None
+            race.third = None
+            race.winning_style = None
+            race.odds_trifecta = None
+            race.odds_trio = None
+            race.odds_exacta = None
+            race.odds_quinella = None
+            SESSION.query(Racer).filter(Racer.race_id == race_id).delete()
+            SESSION.query(Ticket).filter(Ticket.race_id == race_id).delete()
+            try:
+                SESSION.commit()
+            except SQLAlchemyError:
+                _logger.exception(f"Failed to commit scraped before info: race_id={race_id}")
+                SESSION.rollback()
+                raise
+            return
+
         url = (
             f"https://www.boatrace.jp/owpc/pc/race/racelist?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}"
         )
@@ -2576,6 +2618,7 @@ def save_result(race_id):
             race.odds_exacta = None
             race.odds_quinella = None
             SESSION.query(Racer).filter(Racer.race_id == race_id).delete()
+            SESSION.query(Ticket).filter(Ticket.race_id == race_id).delete()
         else:
             race.is_cancel = 0
 
@@ -2853,6 +2896,7 @@ def daily():
             cancel_race.odds_exacta = None
             cancel_race.odds_quinella = None
             SESSION.query(Racer).filter(Racer.race_id == cancel_race.id).delete()
+            SESSION.query(Ticket).filter(Ticket.race_id == cancel_race.id).delete()
         try:
             SESSION.commit()
         except SQLAlchemyError:
