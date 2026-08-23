@@ -1408,28 +1408,31 @@ def calculate_stats(target_date):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target_date", type=int)
+    parser.add_argument("target_dates", type=int, nargs="+")
     args = parser.parse_args()
 
-    try:
-        datetime.strptime(str(args.target_date), "%Y%m%d")
-    except ValueError:
-        return
+    for target_date in args.target_dates:
+        try:
+            datetime.strptime(str(target_date), "%Y%m%d")
+        except ValueError:
+            print("ERROR")
+            return
 
-    download("https://www1.mbrace.or.jp/od2/B/dindex.html", args.target_date)
-    download("https://www1.mbrace.or.jp/od2/K/dindex.html", args.target_date)
+    for target_date in args.target_dates:
+        download("https://www1.mbrace.or.jp/od2/B/dindex.html", target_date)
+        download("https://www1.mbrace.or.jp/od2/K/dindex.html", target_date)
 
-    if os.path.exists(os.path.join(os.getcwd(), "backfill", f"b{args.target_date % 1000000}.lzh")):
-        decompress(f"b{args.target_date % 1000000}.lzh")
-    if os.path.exists(os.path.join(os.getcwd(), "backfill", f"k{args.target_date % 1000000}.lzh")):
-        decompress(f"k{args.target_date % 1000000}.lzh")
+        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"b{target_date % 1000000}.lzh")):
+            decompress(f"b{target_date % 1000000}.lzh")
+        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"k{target_date % 1000000}.lzh")):
+            decompress(f"k{target_date % 1000000}.lzh")
 
-    import_official_data(args.target_date)
+        import_official_data(target_date)
 
-    scrape(args.target_date)
-    import_scraping_data(args.target_date)
+        scrape(target_date)
+        import_scraping_data(target_date)
 
-    calculate_stats(args.target_date)
+        calculate_stats(target_date)
 
 
 if __name__ == "__main__":
