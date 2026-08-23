@@ -53,6 +53,8 @@ _logger = logging.getLogger(__name__)
 DAILY_TIME = "06:00"
 CHARGE_TIME = "08:00"
 
+DAILY_BET_AMOUNT = 100
+
 
 def run_thread(target):
     thread = threading.Thread(target=target)
@@ -2616,14 +2618,13 @@ def bet(race_id: int):
 
                 if bet_ticket_list:
                     for bet_ticket in bet_ticket_list:
-                        bet_amount = 1
                         wait.until(EC.element_to_be_clickable((By.ID, f"regbtn_{bet_ticket.first}_1"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, f"regbtn_{bet_ticket.second}_2"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, f"regbtn_{bet_ticket.third}_3"))).click()
-                        wait.until(EC.element_to_be_clickable((By.ID, "amount"))).send_keys(bet_amount)
+                        wait.until(EC.element_to_be_clickable((By.ID, "amount"))).send_keys(DAILY_BET_AMOUNT // 100)
                         wait.until(EC.element_to_be_clickable((By.ID, "regAmountBtn"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, "amount"))).clear()
-                        bet_ticket.bet_amount = bet_amount * 100
+                        bet_ticket.bet_amount = DAILY_BET_AMOUNT
                     wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "btnSubmit"))).click()
                     total_bet_amount = wait.until(
                         EC.visibility_of_element_located((By.ID, "betconfTotalBetAmount"))
@@ -2831,6 +2832,8 @@ def save_result(race_id):
 def charge():
     _logger.info("Starting charge()")
 
+    global DAILY_BET_AMOUNT
+
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -2883,6 +2886,7 @@ def charge():
             wait.until(EC.element_to_be_clickable((By.ID, "executeCharge"))).click()
             wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
             time_module.sleep(10)
+        DAILY_BET_AMOUNT = max(100, (balance // 2000 // 100) * 100)
     except Exception:
         _logger.exception("Failed to charge.")
     finally:
