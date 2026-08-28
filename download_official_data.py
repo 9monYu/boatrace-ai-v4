@@ -54,22 +54,22 @@ def download(url, download_directory, start, end):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("start", type=int)
-    parser.add_argument("end", type=int)
+    parser.add_argument("start_ym", type=int)
+    parser.add_argument("end_ym", type=int)
     args = parser.parse_args()
 
     download(
         "https://www1.mbrace.or.jp/od2/B/dindex.html",
         os.path.join(os.getcwd(), "official_data", "race"),
-        args.start,
-        args.end,
+        args.start_ym,
+        args.end_ym,
     )
 
     download(
         "https://www1.mbrace.or.jp/od2/K/dindex.html",
         os.path.join(os.getcwd(), "official_data", "result"),
-        args.start,
-        args.end,
+        args.start_ym,
+        args.end_ym,
     )
 
 

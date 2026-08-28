@@ -3,7 +3,7 @@ import csv
 import os
 import re
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import lhafile
 import numpy
@@ -1408,17 +1408,26 @@ def calculate_stats(target_date):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target_dates", type=int, nargs="+")
+    parser.add_argument("start_date", type=int)
+    parser.add_argument("end_date", type=int)
     args = parser.parse_args()
 
-    for target_date in args.target_dates:
-        try:
-            datetime.strptime(str(target_date), "%Y%m%d")
-        except ValueError:
-            print("ERROR")
-            return
+    try:
+        start_date = datetime.strptime(str(args.start_date), "%Y%m%d")
+        end_date = datetime.strptime(str(args.end_date), "%Y%m%d")
+    except ValueError:
+        print("ERROR")
+        return
 
-    for target_date in args.target_dates:
+    if start_date > end_date:
+        print("ERROR")
+        return
+
+    current_date = start_date
+
+    while current_date <= end_date:
+        target_date = int(current_date.strftime("%Y%m%d"))
+
         download("https://www1.mbrace.or.jp/od2/B/dindex.html", target_date)
         download("https://www1.mbrace.or.jp/od2/K/dindex.html", target_date)
 
@@ -1433,6 +1442,8 @@ def main():
         import_scraping_data(target_date)
 
         calculate_stats(target_date)
+
+        current_date += timedelta(days=1)
 
 
 if __name__ == "__main__":

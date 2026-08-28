@@ -13,13 +13,13 @@ from models import Race
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("start", type=int)
-    parser.add_argument("end", type=int)
+    parser.add_argument("start_date", type=int)
+    parser.add_argument("end_date", type=int)
     args = parser.parse_args()
 
     try:
-        datetime.strptime(str(args.start), "%Y%m%d")
-        datetime.strptime(str(args.end), "%Y%m%d")
+        datetime.strptime(str(args.start_date), "%Y%m%d")
+        datetime.strptime(str(args.end_date), "%Y%m%d")
     except ValueError:
         return
 
@@ -27,8 +27,8 @@ def main():
         SESSION.query(Race)
         .filter(
             Race.is_cancel == 0,
-            Race.date >= args.start,
-            Race.date <= args.end,
+            Race.date >= args.start_date,
+            Race.date <= args.end_date,
         )
         .order_by(Race.id.asc())
         .all()

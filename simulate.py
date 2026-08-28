@@ -13,27 +13,30 @@ from models import Race, Ticket
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("start", type=int)
-    parser.add_argument("end", type=int)
+    parser.add_argument("start_date", type=int)
+    parser.add_argument("end_date", type=int)
     parser.add_argument("--bankroll", type=int)
     args = parser.parse_args()
 
     try:
-        datetime.strptime(str(args.start), "%Y%m%d")
-        datetime.strptime(str(args.end), "%Y%m%d")
+        datetime.strptime(str(args.start_date), "%Y%m%d")
+        datetime.strptime(str(args.end_date), "%Y%m%d")
     except ValueError:
         return
 
     with open(
-        os.path.join(os.getcwd(), "temp", f"simulation_{args.start}_{args.end}.csv"), "w", newline="", encoding="utf-8"
+        os.path.join(os.getcwd(), "temp", f"simulation_{args.start_date}_{args.end_date}.csv"),
+        "w",
+        newline="",
+        encoding="utf-8",
     ) as f:
         writer = csv.writer(f, delimiter="\t")
         race_list = (
             SESSION.query(Race)
             .filter(
                 Race.is_cancel == 0,
-                Race.date >= args.start,
-                Race.date <= args.end,
+                Race.date >= args.start_date,
+                Race.date <= args.end_date,
                 Race.grade.isnot(None),
                 Race.venue.isnot(None),
                 Race.day_number.isnot(None),
