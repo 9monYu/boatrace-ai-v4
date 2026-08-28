@@ -372,6 +372,10 @@ def main():
                     race = SESSION.query(Race).filter(Race.id == race_id).one()
                     deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
                     sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
+                    tickets = {
+                        (ticket.first, ticket.second, ticket.third): ticket
+                        for ticket in SESSION.query(Ticket).filter(Ticket.race_id == race_id).all()
+                    }
                     for index in range(120):
                         is_win = (
                             1
@@ -384,15 +388,8 @@ def main():
                         deadline_odds_market_share = (
                             (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
                         )
-                        ticket = (
-                            SESSION.query(Ticket)
-                            .filter(
-                                Ticket.race_id == race_id,
-                                Ticket.first == TRIFECTA_LIST[index][0],
-                                Ticket.second == TRIFECTA_LIST[index][1],
-                                Ticket.third == TRIFECTA_LIST[index][2],
-                            )
-                            .one_or_none()
+                        ticket = tickets.get(
+                            (TRIFECTA_LIST[index][0], TRIFECTA_LIST[index][1], TRIFECTA_LIST[index][2])
                         )
                         if ticket is not None:
                             ticket.is_win = is_win
