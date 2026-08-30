@@ -21,7 +21,8 @@ from models import Race, Racer, Ticket
 
 def download(url, target_date):
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -33,7 +34,7 @@ def download(url, target_date):
         },
     )
     driver = webdriver.Chrome(options=chrome_options)
-    wait = WebDriverWait(driver=driver, timeout=30)
+    wait = WebDriverWait(driver=driver, timeout=5)
     driver.get(url)
     wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
     select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))

@@ -65,7 +65,8 @@ def download(target_date: date, url: str):
     _logger.info(f'Starting download(): target_date={target_date.strftime("%Y%m%d")}, url="{url}"')
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -79,7 +80,7 @@ def download(target_date: date, url: str):
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=30)
+        wait = WebDriverWait(driver=driver, timeout=5)
 
         driver.get(url)
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
@@ -2479,7 +2480,8 @@ def bet(race_id: int):
     _logger.info(f"Starting bet(): race_id={race_id}")
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -2495,7 +2497,7 @@ def bet(race_id: int):
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=15)
+        wait = WebDriverWait(driver=driver, timeout=5)
 
         driver.get("https://www.boatrace.jp/owpc/pc/login")
 
@@ -2506,6 +2508,11 @@ def bet(race_id: int):
         wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
 
         driver.switch_to.window(driver.window_handles[1])
+        try:
+            wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+        except Exception:
+            pass
         jyo_element = wait.until(EC.element_to_be_clickable((By.ID, f"jyo{race.venue:02d}")))
         if jyo_element.get_attribute("class") == "border t":
             jyo_element.click()
@@ -2835,7 +2842,8 @@ def charge():
     global DAILY_BET_AMOUNT
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -2849,7 +2857,7 @@ def charge():
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=30)
+        wait = WebDriverWait(driver=driver, timeout=5)
 
         driver.get("https://login.paypay-bank.co.jp/")
         wait.until(EC.element_to_be_clickable((By.ID, "idTenNo"))).send_keys(PAYPAY_BANK_STORE_NUMBER)
