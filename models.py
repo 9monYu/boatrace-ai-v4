@@ -1,4 +1,4 @@
-from sqlalchemy import INTEGER, REAL, TEXT, Column, ForeignKey
+from sqlalchemy import INTEGER, REAL, TEXT, Column, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
 from constants import BASE
@@ -96,6 +96,8 @@ class Race(BASE):
 
 class Racer(BASE):
     __tablename__ = "racers"
+
+    __table_args__ = (Index("index_racers_racer_number_race_id", "racer_number", "race_id"),)
 
     race_id = Column(INTEGER, ForeignKey("races.id"), primary_key=True)
     boat_number = Column(INTEGER, primary_key=True)
