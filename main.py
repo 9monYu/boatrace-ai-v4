@@ -2600,19 +2600,15 @@ def bet(race_id: int):
                     SESSION.query(Ticket)
                     .filter(
                         Ticket.race_id == race_id,
-                        Ticket.first.in_([2, 3, 4, 5]),
                         or_(
                             and_(
+                                Ticket.first.in_([2, 3]),
                                 Ticket.before_deadline_odds >= 1.0,
-                                Ticket.before_deadline_odds < 50.0,
+                                Ticket.before_deadline_odds < 100.0,
                                 Ticket.before_deadline_odds_expected_value >= 1.30,
                             ),
                             and_(
-                                Ticket.before_deadline_odds >= 50.0,
-                                Ticket.before_deadline_odds < 100.0,
-                                Ticket.before_deadline_odds_expected_value >= 1.25,
-                            ),
-                            and_(
+                                Ticket.first.in_([2, 3, 4, 5]),
                                 Ticket.before_deadline_odds >= 100.0,
                                 Ticket.before_deadline_odds < 400.0,
                                 Ticket.before_deadline_odds_expected_value >= 1.15,
