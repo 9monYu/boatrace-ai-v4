@@ -642,7 +642,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception(f"Failed to scrape 'before_info_weight': race_id={race.id}")
+                        _logger.warning(f"Failed to scrape 'before_info_weight': race_id={race.id}")
                     # display time
                     try:
                         match boat_number:
@@ -700,7 +700,7 @@ def scrape(target_date: date):
                             case _:
                                 pass
                     except Exception:
-                        _logger.exception(f"Failed to scrape 'before_info_adjusted_weight': race_id={race.id}")
+                        _logger.warning(f"Failed to scrape 'before_info_adjusted_weight': race_id={race.id}")
                 else:
                     pass
             if boat_number == 6:
@@ -2371,7 +2371,7 @@ def predict(race_id: int):
                         try:
                             racer.before_info_weight = float(td_list[3].get_text(strip=True).replace("kg", ""))
                         except Exception:
-                            _logger.exception(f"Failed to scrape 'before_info_weight': race_id={race_id}")
+                            _logger.warning(f"Failed to scrape 'before_info_weight': race_id={race_id}")
                         try:
                             racer.before_info_display_time = float(td_list[4].get_text(strip=True))
                         except Exception:
@@ -2384,7 +2384,7 @@ def predict(race_id: int):
                         try:
                             racer.before_info_adjusted_weight = float(tr.find("td").get_text(strip=True))
                         except Exception:
-                            _logger.exception(f"Failed to scrape 'before_info_adjusted_weight': race_id={race_id}")
+                            _logger.warning(f"Failed to scrape 'before_info_adjusted_weight': race_id={race_id}")
                     else:
                         pass
                 if boat_number == 6:
@@ -2465,8 +2465,8 @@ def predict(race_id: int):
                     raise
 
                 deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
-                deadline_before_65_seconds = deadline - timedelta(seconds=65)
-                schedule.every().day.at(deadline_before_65_seconds.strftime("%H:%M:%S")).do(
+                deadline_before_75_seconds = deadline - timedelta(seconds=75)
+                schedule.every().day.at(deadline_before_75_seconds.strftime("%H:%M:%S")).do(
                     run_thread, partial(bet, race_id=race_id)
                 )
     except Exception:
@@ -2636,6 +2636,7 @@ def bet(race_id: int):
                     wait.until(EC.element_to_be_clickable((By.ID, "pass"))).send_keys(BET_PASSWORD)
                     wait.until(EC.element_to_be_clickable((By.ID, "submitBet"))).click()
                     wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
+                    time_module.sleep(5)
                     for bet_ticket in bet_ticket_list:
                         _logger.info(
                             f"BET: race_id={bet_ticket.race_id}, trifecta={bet_ticket.first}-{bet_ticket.second}-{bet_ticket.third}, amount={bet_ticket.bet_amount}"
@@ -2869,7 +2870,7 @@ def charge():
         balance = int(balance_text.replace(",", "").replace("円", ""))
         wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "p.logoutWrap > a.logout"))).click()
         wait.until(EC.alert_is_present()).accept()
-        time_module.sleep(10)
+        time_module.sleep(5)
         if balance >= 1000:
             driver.get("https://www.boatrace.jp/owpc/pc/login")
             wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
@@ -2889,7 +2890,7 @@ def charge():
             wait.until(EC.element_to_be_clickable((By.ID, "chargeBetPassword"))).send_keys(BET_PASSWORD)
             wait.until(EC.element_to_be_clickable((By.ID, "executeCharge"))).click()
             wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
-            time_module.sleep(10)
+            time_module.sleep(5)
         DAILY_BET_AMOUNT = max(100, (balance // 2000 // 100) * 100)
     except Exception:
         _logger.exception("Failed to charge.")
