@@ -1424,6 +1424,13 @@ def main():
         print("ERROR")
         return
 
+    try:
+        for file_name in os.listdir(os.path.join(os.getcwd(), "backfill")):
+            if file_name != ".gitkeep":
+                os.remove(os.path.join(os.getcwd(), "backfill", file_name))
+    except Exception:
+        pass
+
     current_date = start_date
 
     while current_date <= end_date:
