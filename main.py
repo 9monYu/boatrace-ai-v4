@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import re
+import shutil
 import statistics
 import threading
 import time as time_module
@@ -2910,6 +2911,22 @@ def daily():
 
     today = date.today()
     yesterday = today - timedelta(days=1)
+
+    try:
+        shutil.copy2(
+            os.path.join(os.getcwd(), "database", "database.db"),
+            os.path.join(os.getcwd(), "database", f"database_{yesterday.strftime('%Y%m%d')}.db"),
+        )
+    except Exception:
+        _logger.exception("Failed to back up database.")
+    else:
+        for filename in os.listdir(os.path.join(os.getcwd(), "database")):
+            if filename.startswith("database_") and filename.endswith(".db"):
+                try:
+                    if datetime.strptime(filename, "database_%Y%m%d.db").date() < today - timedelta(days=3):
+                        os.remove(os.path.join(os.getcwd(), "database", filename))
+                except ValueError:
+                    pass
 
     try:
         for file_name in os.listdir(os.path.join(os.getcwd(), "temp")):
