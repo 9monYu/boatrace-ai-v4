@@ -2509,11 +2509,19 @@ def bet(race_id: int):
         wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
 
         driver.switch_to.window(driver.window_handles[1])
+
+        special_notice_wait = WebDriverWait(driver=driver, timeout=2)
         try:
-            wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
-            wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
-        except Exception:
+            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+            _logger.info("Checked all as read.")
+        except TimeoutException:
             pass
+        try:
+            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+            _logger.info("Closed special notice.")
+        except TimeoutException:
+            pass
+
         jyo_element = wait.until(EC.element_to_be_clickable((By.ID, f"jyo{race.venue:02d}")))
         if jyo_element.get_attribute("class") == "border t":
             jyo_element.click()
@@ -2880,10 +2888,16 @@ def charge():
             wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
             wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
             driver.switch_to.window(driver.window_handles[1])
+            special_notice_wait = WebDriverWait(driver=driver, timeout=2)
             try:
-                wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
-                wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
-            except Exception:
+                special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+                _logger.info("Checked all as read.")
+            except TimeoutException:
+                pass
+            try:
+                special_notice_wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+                _logger.info("Closed special notice.")
+            except TimeoutException:
                 pass
             wait.until(EC.element_to_be_clickable((By.ID, "gnavi01"))).click()
             wait.until(EC.element_to_be_clickable((By.ID, "charge"))).click()
