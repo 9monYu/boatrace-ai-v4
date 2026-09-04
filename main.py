@@ -2,6 +2,7 @@ import csv
 import logging
 import math
 import os
+import platform
 import re
 import shutil
 import statistics
@@ -68,6 +69,8 @@ def download(target_date: date, url: str):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    if platform.system() == "Linux":
+        chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -2515,6 +2518,8 @@ def bet(race_id: int):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    if platform.system() == "Linux":
+        chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
@@ -2882,6 +2887,8 @@ def charge():
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    if platform.system() == "Linux":
+        chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     chrome_options.add_experimental_option(
         "prefs",
