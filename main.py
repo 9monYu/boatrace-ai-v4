@@ -2113,7 +2113,7 @@ def predict(race_id: int):
             try:
                 SESSION.commit()
             except SQLAlchemyError:
-                _logger.exception(f"Failed to commit scraped before info: race_id={race_id}")
+                _logger.exception(f"Failed to commit canceled race updates: race_id={race_id}")
                 SESSION.rollback()
                 raise
             return
@@ -2137,6 +2137,15 @@ def predict(race_id: int):
         deadline_list = [
             td.get_text(strip=True) for td in beautifulsoup.find("td", string="締切予定時刻").parent.find_all("td")[1:]
         ]
+
+        latest_deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
+        if datetime.combine(date.today(), latest_deadline.time()) - datetime.now() >= timedelta(minutes=10):
+            deadline_before_5_minutes = latest_deadline - timedelta(minutes=5)
+            schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(
+                run_thread, partial(predict, race_id=race.id)
+            )
+            _logger.info(f"Rescheduled predict(): race_id={race.id}")
+            return
 
         try:
             classes = beautifulsoup.find("div", class_="heading2_title").get("class")
