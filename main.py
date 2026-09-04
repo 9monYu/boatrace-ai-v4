@@ -111,6 +111,12 @@ def download(target_date: date, url: str):
         time_module.sleep(5)
     except Exception:
         _logger.exception(f"Failed to download official data: target_date={target_date.strftime('%Y%m%d')}")
+        try:
+            driver.save_screenshot(
+                os.path.join(os.getcwd(), "screenshots", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            )
+        except Exception:
+            pass
         raise
     finally:
         try:
@@ -2694,6 +2700,12 @@ def bet(race_id: int):
                         SESSION.rollback()
     except Exception:
         _logger.exception(f"Failed to bet: race_id={race_id}")
+        try:
+            driver.save_screenshot(
+                os.path.join(os.getcwd(), "screenshots", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            )
+        except Exception:
+            pass
         SESSION.rollback()
     finally:
         try:
@@ -2948,6 +2960,12 @@ def charge():
         DAILY_BET_AMOUNT = max(100, (balance // 2000 // 100) * 100)
     except Exception:
         _logger.exception("Failed to charge.")
+        try:
+            driver.save_screenshot(
+                os.path.join(os.getcwd(), "screenshots", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            )
+        except Exception:
+            pass
     finally:
         try:
             driver.quit()

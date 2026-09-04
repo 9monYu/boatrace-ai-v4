@@ -225,6 +225,8 @@ __marimo__/
 /official_data/result/*.TXT
 /official_data/result/*.lzh
 /sample*.py
+/screenshots/*
+!/screenshots/.gitkeep
 /temp/*
 !/temp/.gitkeep
 
