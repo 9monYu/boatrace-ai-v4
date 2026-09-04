@@ -1167,6 +1167,29 @@ def import_scraping_data(target_date: date):
     SESSION.commit()
 
 
+def calculate_deadline_odds_expected_values(race_id: int):
+    _logger.info(f"Starting calculate_deadline_odds_expected_values(): race_id={race_id}")
+
+    ticket_list = (
+        SESSION.query(Ticket)
+        .filter(
+            Ticket.race_id == race_id,
+            Ticket.delta.isnot(None),
+            Ticket.deadline_odds.isnot(None),
+            Ticket.deadline_odds_market_share.isnot(None),
+        )
+        .all()
+    )
+    if ticket_list:
+        sum_exp_score = sum(ticket.deadline_odds_market_share * math.exp(ticket.delta) for ticket in ticket_list)
+        for ticket in ticket_list:
+            ticket.deadline_odds_probability = (
+                ticket.deadline_odds_market_share * math.exp(ticket.delta) / sum_exp_score
+            )
+            ticket.deadline_odds_expected_value = ticket.deadline_odds_probability * ticket.deadline_odds
+        SESSION.commit()
+
+
 def calculate_z_scores(race_id: int):
     _logger.info(f"Starting calculate_z_scores(): race_id={race_id}")
 
@@ -2983,6 +3006,7 @@ def daily():
         for race in race_list:
             calculate_z_scores(race.id)
             calculate_stats(race.id)
+            calculate_deadline_odds_expected_values(race.id)
 
         cancel_race_list = (
             SESSION.query(Race)
