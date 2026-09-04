@@ -9,7 +9,7 @@ from models import Race, Racer, VenueStat
 def main():
     oldest_race = SESSION.query(Race).order_by(Race.id.asc()).first()
 
-    for year in tqdm(range(oldest_race.date // 10000, date.today().year + 1)):
+    for year in tqdm(range(oldest_race.date // 10000, date.today().year)):
         venue_stat_list = []
         for venue in range(1, 25):
             normal_entry_race_count = 0

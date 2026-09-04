@@ -1726,7 +1726,7 @@ def output_predict_race_data(race: Race):
     row.append(race.period_progress_rate)
     row.append(race.venue)
     venue_stat = (
-        SESSION.query(VenueStat).filter(VenueStat.venue == race.venue, VenueStat.year == race.date // 10000).one()
+        SESSION.query(VenueStat).filter(VenueStat.venue == race.venue, VenueStat.year == (race.date // 10000) - 1).one()
     )
     row.append(venue_stat.normal_entry_course1_1st_rate)
     row.append(venue_stat.normal_entry_course1_2nd_rate)
