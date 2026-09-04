@@ -2156,6 +2156,11 @@ def predict(race_id: int):
             _logger.info(f"Rescheduled predict(): race_id={race.id}")
             return
 
+        deadline_after_55_minutes = latest_deadline + timedelta(minutes=55)
+        schedule.every().day.at(deadline_after_55_minutes.strftime("%H:%M")).do(
+            run_thread, partial(save_result, race_id=race.id)
+        )
+
         try:
             classes = beautifulsoup.find("div", class_="heading2_title").get("class")
             if "is-SGa" in classes:
@@ -2506,8 +2511,7 @@ def predict(race_id: int):
                     SESSION.rollback()
                     raise
 
-                deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
-                deadline_before_75_seconds = deadline - timedelta(seconds=75)
+                deadline_before_75_seconds = latest_deadline - timedelta(seconds=75)
                 schedule.every().day.at(deadline_before_75_seconds.strftime("%H:%M:%S")).do(
                     run_thread, partial(bet, race_id=race_id)
                 )
@@ -3092,10 +3096,6 @@ def daily():
             deadline_before_5_minutes = deadline - timedelta(minutes=5)
             schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(
                 run_thread, partial(predict, race_id=race.id)
-            )
-            deadline_after_55_minutes = deadline + timedelta(minutes=55)
-            schedule.every().day.at(deadline_after_55_minutes.strftime("%H:%M")).do(
-                run_thread, partial(save_result, race_id=race.id)
             )
     except Exception:
         _logger.exception("Failed to execute daily task.")
