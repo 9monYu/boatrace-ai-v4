@@ -128,7 +128,7 @@ def download(target_date: date, url: str):
 def import_race_data(target_date: date):
     _logger.info(f"Starting import_race_data(): target_date={target_date.strftime('%Y%m%d')}")
 
-    with open(os.path.join(os.getcwd(), "temp", f'b{target_date.strftime("%y%m%d")}.TXT'), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"B{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
         venue = None
         day_number = None
         date_ = target_date.strftime("%Y%m%d")
@@ -189,7 +189,7 @@ def import_race_data(target_date: date):
 def import_result_data(target_date: date):
     _logger.info(f"Starting import_result_data(): target_date={target_date.strftime('%Y%m%d')}")
 
-    with open(os.path.join(os.getcwd(), "temp", f"k{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"K{target_date.strftime('%y%m%d')}.TXT"), "r", encoding="CP932") as f:
         date_ = target_date.strftime("%Y%m%d")
         venue = None
         for line in f:

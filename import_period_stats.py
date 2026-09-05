@@ -10,7 +10,7 @@ def main():
     period_stats_list = []
     period_stats_directory_path = os.path.join(os.getcwd(), "official_data", "period_stats")
     for file in tqdm(os.listdir(period_stats_directory_path)):
-        if file.startswith("fan") and (file.endswith(".txt") or file.endswith(".TXT")):
+        if file.startswith("fan") and file.endswith(".txt"):
             with open(os.path.join(period_stats_directory_path, file), "r", encoding="CP932") as f:
                 for line in f:
                     if line == "\n":

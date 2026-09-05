@@ -13,7 +13,7 @@ def main():
     race_list = []
     race_directory_path = os.path.join(os.getcwd(), "official_data", "race")
     for file in tqdm(os.listdir(race_directory_path)):
-        if file.startswith("B") and (file.endswith(".txt") or file.endswith(".TXT")):
+        if file.startswith("B") and file.endswith(".TXT"):
             with open(os.path.join(race_directory_path, file), "r", encoding="CP932") as f:
                 venue = None
                 day_number = None
@@ -74,7 +74,7 @@ def main():
     # result
     result_directory_path = os.path.join(os.getcwd(), "official_data", "result")
     for file in tqdm(os.listdir(result_directory_path)):
-        if file.startswith("K") and (file.endswith(".txt") or file.endswith(".TXT")):
+        if file.startswith("K") and file.endswith(".TXT"):
             with open(os.path.join(result_directory_path, file), "r", encoding="CP932") as f:
                 date_ = int(f'20{file.split(".")[0][1:]}')
                 venue = None

@@ -94,7 +94,7 @@ def import_official_data(target_date: int):
     month = (target_date // 100) % 100
     day = target_date % 100
     # race
-    with open(os.path.join(os.getcwd(), "backfill", f"b{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "backfill", f"B{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         day_number = None
         if 5 <= month <= 10:
@@ -143,7 +143,7 @@ def import_official_data(target_date: int):
     SESSION.commit()
 
     # result
-    with open(os.path.join(os.getcwd(), "backfill", f"k{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "backfill", f"K{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         for line in f:
             bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
@@ -2136,10 +2136,10 @@ def main():
         download("https://www1.mbrace.or.jp/od2/B/dindex.html", target_date)
         download("https://www1.mbrace.or.jp/od2/K/dindex.html", target_date)
 
-        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"b{target_date % 1000000}.lzh")):
-            decompress(f"b{target_date % 1000000}.lzh")
-        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"k{target_date % 1000000}.lzh")):
-            decompress(f"k{target_date % 1000000}.lzh")
+        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"B{target_date % 1000000}.lzh")):
+            decompress(f"B{target_date % 1000000}.lzh")
+        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"K{target_date % 1000000}.lzh")):
+            decompress(f"K{target_date % 1000000}.lzh")
 
         import_official_data(target_date)
 
