@@ -28,6 +28,7 @@ from constants import (
     SEED_COUNT,
     SESSION,
     TRIFECTA_LIST,
+    USER_AGENT,
     WEATHER_LIST,
     WIND_DIRECTION_ANGLES,
 )
@@ -36,8 +37,11 @@ from models import PeriodStat, Race, Racer, Ticket, VenueStat
 
 def download(url: str, target_date: int):
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     if platform.system() == "Linux":
         chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])

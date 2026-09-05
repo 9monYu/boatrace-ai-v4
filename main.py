@@ -45,6 +45,7 @@ from constants import (
     SEED_COUNT,
     SESSION,
     TRIFECTA_LIST,
+    USER_AGENT,
     WEATHER_LIST,
     WIND_DIRECTION_ANGLES,
 )
@@ -67,8 +68,11 @@ def download(target_date: date, url: str):
     _logger.info(f'Starting download(): target_date={target_date.strftime("%Y%m%d")}, url="{url}"')
 
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     if platform.system() == "Linux":
         chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -2526,8 +2530,11 @@ def bet(race_id: int):
     _logger.info(f"Starting bet(): race_id={race_id}")
 
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     if platform.system() == "Linux":
         chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -2901,8 +2908,11 @@ def charge():
     global DAILY_BET_AMOUNT
 
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     if platform.system() == "Linux":
         chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])

@@ -10,11 +10,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
+from constants import USER_AGENT
+
 
 def download(url, download_directory, start, end):
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     if platform.system() == "Linux":
         chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -48,6 +53,7 @@ def download(url, download_directory, start, end):
             radio.click()
             download_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@onclick="download(this)"]')))
             download_button.click()
+            time.sleep(1)
         driver.switch_to.default_content()
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.NAME, "menu")))
         select_box = wait.until(EC.presence_of_element_located((By.NAME, "MONTH")))

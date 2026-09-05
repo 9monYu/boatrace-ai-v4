@@ -6,9 +6,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import decl_api, scoped_session, scoping, sessionmaker
 from sqlalchemy.pool import Pool
 
-REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-}
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+
+REQUEST_HEADERS = {"User-Agent": USER_AGENT}
 
 GRADE_LIST = ["SG", "PG1", "G1", "G2", "G3", "一般"]
 
