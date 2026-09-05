@@ -58,6 +58,8 @@ CHARGE_TIME = "08:00"
 
 DAILY_BET_AMOUNT = 100
 
+bet_schedule_lock = threading.Lock()
+
 
 def run_thread(target):
     thread = threading.Thread(target=target)
@@ -2153,15 +2155,13 @@ def predict(race_id: int):
 
         latest_deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
         if datetime.combine(date.today(), latest_deadline.time()) - datetime.now() >= timedelta(minutes=10):
-            deadline_before_5_minutes = latest_deadline - timedelta(minutes=5)
-            schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(
-                run_thread, partial(predict, race_id=race.id)
-            )
+            predict_time = latest_deadline - timedelta(minutes=5)
+            schedule.every().day.at(predict_time.strftime("%H:%M")).do(run_thread, partial(predict, race_id=race.id))
             _logger.info(f"Rescheduled predict(): race_id={race.id}")
             return
 
-        deadline_after_55_minutes = latest_deadline + timedelta(minutes=55)
-        schedule.every().day.at(deadline_after_55_minutes.strftime("%H:%M")).do(
+        save_result_time = latest_deadline + timedelta(minutes=55)
+        schedule.every().day.at(save_result_time.strftime("%H:%M")).do(
             run_thread, partial(save_result, race_id=race.id)
         )
 
@@ -2515,10 +2515,14 @@ def predict(race_id: int):
                     SESSION.rollback()
                     raise
 
-                deadline_before_75_seconds = latest_deadline - timedelta(seconds=75)
-                schedule.every().day.at(deadline_before_75_seconds.strftime("%H:%M:%S")).do(
-                    run_thread, partial(bet, race_id=race_id)
-                )
+                bet_time = latest_deadline - timedelta(seconds=40)
+                with bet_schedule_lock:
+                    while any(job.at_time == bet_time.time() for job in schedule.get_jobs("bet")):
+                        bet_time -= timedelta(seconds=20)
+                        _logger.info(f"Adjusted bet time: race_id={race_id}, bet_time={bet_time.strftime('%H:%M:%S')}")
+                    schedule.every().day.at(bet_time.strftime("%H:%M:%S")).do(
+                        run_thread, partial(bet, race_id=race_id)
+                    ).tag("bet")
     except Exception:
         _logger.exception(f"Failed to predict: race_id={race_id}")
         SESSION.rollback()
@@ -2529,160 +2533,160 @@ def predict(race_id: int):
 def bet(race_id: int):
     _logger.info(f"Starting bet(): race_id={race_id}")
 
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.page_load_strategy = "eager"
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    if platform.system() == "Linux":
-        chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    chrome_options.add_experimental_option(
-        "prefs",
-        {
-            "profile.managed_default_content_settings.images": 2,
-            "credentials_enable_service": False,
-            "download.default_directory": os.path.join(os.getcwd(), "temp"),
-            "download_bubble.partial_view_enabled": False,
-        },
-    )
-
     try:
         race = SESSION.query(Race).filter(Race.id == race_id).one()
 
-        driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver=driver, timeout=5)
+        for retry in range(2):
+            try:
+                response = requests.get(
+                    f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
+                    headers=REQUEST_HEADERS,
+                    timeout=2,
+                )
+                response.raise_for_status()
+                break
+            except requests.RequestException:
+                if retry == 1:
+                    raise
 
-        driver.get("https://www.boatrace.jp/owpc/pc/login")
-
-        wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
-        wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
-        wait.until(EC.element_to_be_clickable((By.ID, "in_PassWord"))).send_keys(AUTH_PASSWORD)
-        wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
-        wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
-
-        driver.switch_to.window(driver.window_handles[1])
-
-        special_notice_wait = WebDriverWait(driver=driver, timeout=2)
+        beautifulsoup = BeautifulSoup(response.text, "html.parser")
+        soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
+        for index, soup in enumerate(soup_list):
+            odds = None
+            try:
+                odds = float(soup.get_text(strip=True))
+            except Exception:
+                pass
+            if odds is not None:
+                ticket = (
+                    SESSION.query(Ticket)
+                    .filter(
+                        Ticket.race_id == race_id,
+                        Ticket.first == TRIFECTA_LIST[index][0],
+                        Ticket.second == TRIFECTA_LIST[index][1],
+                        Ticket.third == TRIFECTA_LIST[index][2],
+                    )
+                    .one_or_none()
+                )
+                if ticket is not None:
+                    ticket.before_deadline_odds = odds
+            if index == 119:
+                break
         try:
-            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
-            _logger.info("Checked all as read.")
-        except TimeoutException:
-            pass
-        try:
-            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
-            _logger.info("Closed special notice.")
-        except TimeoutException:
-            pass
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception(f"Failed to commit before deadline odds: race_id={race_id}")
+            SESSION.rollback()
+            raise
 
-        jyo_element = wait.until(EC.element_to_be_clickable((By.ID, f"jyo{race.venue:02d}")))
-        if jyo_element.get_attribute("class") == "border t":
-            jyo_element.click()
-            sel_race_no_element = wait.until(
-                EC.presence_of_element_located((By.ID, f"selRaceNo{str(race.race_number).zfill(2)}"))
+        ticket_list = (
+            SESSION.query(Ticket)
+            .filter(
+                Ticket.race_id == race_id,
+                Ticket.before_deadline_odds.isnot(None),
             )
-            if "current" in sel_race_no_element.get_attribute("class"):
-                for retry in range(2):
-                    try:
-                        response = requests.get(
-                            f"https://www.boatrace.jp/owpc/pc/race/odds3t?rno={race.race_number}&jcd={race.venue:02d}&hd={race.date}",
-                            headers=REQUEST_HEADERS,
-                            timeout=2,
-                        )
-                        response.raise_for_status()
-                        break
-                    except requests.RequestException:
-                        if retry == 1:
-                            raise
-
-                beautifulsoup = BeautifulSoup(response.text, "html.parser")
-                soup_list = beautifulsoup.find_all("td", class_="oddsPoint")
-                for index, soup in enumerate(soup_list):
-                    odds = None
-                    try:
-                        odds = float(soup.get_text(strip=True))
-                    except Exception:
-                        pass
-                    if odds is not None:
-                        ticket = (
-                            SESSION.query(Ticket)
-                            .filter(
-                                Ticket.race_id == race_id,
-                                Ticket.first == TRIFECTA_LIST[index][0],
-                                Ticket.second == TRIFECTA_LIST[index][1],
-                                Ticket.third == TRIFECTA_LIST[index][2],
-                            )
-                            .one_or_none()
-                        )
-                        if ticket is not None:
-                            ticket.before_deadline_odds = odds
-                    if index == 119:
-                        break
-                try:
-                    SESSION.commit()
-                except SQLAlchemyError:
-                    _logger.exception(f"Failed to commit before deadline odds: race_id={race_id}")
-                    SESSION.rollback()
-                    raise
-
-                ticket_list = (
-                    SESSION.query(Ticket)
-                    .filter(
-                        Ticket.race_id == race_id,
-                        Ticket.before_deadline_odds.isnot(None),
-                    )
-                    .all()
+            .all()
+        )
+        if len(ticket_list) == 120:
+            before_deadline_odds_list = [ticket.before_deadline_odds for ticket in ticket_list]
+            sum_before_deadline_odds_inverse = sum(
+                1.0 / before_deadline_odds for before_deadline_odds in before_deadline_odds_list
+            )
+            sum_exp_score = 0.0
+            for ticket in ticket_list:
+                ticket.before_deadline_odds_market_share = (
+                    1.0 / ticket.before_deadline_odds
+                ) / sum_before_deadline_odds_inverse
+                sum_exp_score += ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
+            for ticket in ticket_list:
+                ticket.before_deadline_odds_probability = (
+                    ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
+                ) / sum_exp_score
+                ticket.before_deadline_odds_expected_value = (
+                    ticket.before_deadline_odds_probability * ticket.before_deadline_odds
                 )
-                if len(ticket_list) == 120:
-                    before_deadline_odds_list = [ticket.before_deadline_odds for ticket in ticket_list]
-                    sum_before_deadline_odds_inverse = sum(
-                        1.0 / before_deadline_odds for before_deadline_odds in before_deadline_odds_list
-                    )
-                    sum_exp_score = 0.0
-                    for ticket in ticket_list:
-                        ticket.before_deadline_odds_market_share = (
-                            1.0 / ticket.before_deadline_odds
-                        ) / sum_before_deadline_odds_inverse
-                        sum_exp_score += ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
-                    for ticket in ticket_list:
-                        ticket.before_deadline_odds_probability = (
-                            ticket.before_deadline_odds_market_share * math.exp(ticket.delta)
-                        ) / sum_exp_score
-                        ticket.before_deadline_odds_expected_value = (
-                            ticket.before_deadline_odds_probability * ticket.before_deadline_odds
-                        )
-                try:
-                    SESSION.commit()
-                except SQLAlchemyError:
-                    _logger.exception(f"Failed to commit expected values: race_id={race_id}")
-                    SESSION.rollback()
-                    raise
+        try:
+            SESSION.commit()
+        except SQLAlchemyError:
+            _logger.exception(f"Failed to commit expected values: race_id={race_id}")
+            SESSION.rollback()
+            raise
 
-                bet_ticket_list = (
-                    SESSION.query(Ticket)
-                    .filter(
-                        Ticket.race_id == race_id,
-                        or_(
-                            and_(
-                                Ticket.first.in_([2, 3]),
-                                Ticket.before_deadline_odds >= 1.0,
-                                Ticket.before_deadline_odds < 100.0,
-                                Ticket.before_deadline_odds_expected_value >= 1.30,
-                            ),
-                            and_(
-                                Ticket.first.in_([2, 3, 4, 5]),
-                                Ticket.before_deadline_odds >= 100.0,
-                                Ticket.before_deadline_odds < 400.0,
-                                Ticket.before_deadline_odds_expected_value >= 1.15,
-                            ),
-                        ),
-                    )
-                    .order_by(Ticket.first.asc(), Ticket.second.asc(), Ticket.third.asc())
-                    .all()
+        bet_ticket_list = (
+            SESSION.query(Ticket)
+            .filter(
+                Ticket.race_id == race_id,
+                or_(
+                    and_(
+                        Ticket.first.in_([2, 3]),
+                        Ticket.before_deadline_odds >= 1.0,
+                        Ticket.before_deadline_odds < 100.0,
+                        Ticket.before_deadline_odds_expected_value >= 1.30,
+                    ),
+                    and_(
+                        Ticket.first.in_([2, 3, 4, 5]),
+                        Ticket.before_deadline_odds >= 100.0,
+                        Ticket.before_deadline_odds < 400.0,
+                        Ticket.before_deadline_odds_expected_value >= 1.15,
+                    ),
+                ),
+            )
+            .order_by(Ticket.first.asc(), Ticket.second.asc(), Ticket.third.asc())
+            .all()
+        )
+
+        if bet_ticket_list:
+            chrome_options = webdriver.ChromeOptions()
+            chrome_options.page_load_strategy = "eager"
+            chrome_options.add_argument("--headless=new")
+            chrome_options.add_argument("--window-size=1920,1080")
+            chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            if platform.system() == "Linux":
+                chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+            chrome_options.add_experimental_option(
+                "prefs",
+                {
+                    "profile.managed_default_content_settings.images": 2,
+                    "credentials_enable_service": False,
+                    "download.default_directory": os.path.join(os.getcwd(), "temp"),
+                    "download_bubble.partial_view_enabled": False,
+                },
+            )
+
+            driver = webdriver.Chrome(options=chrome_options)
+            wait = WebDriverWait(driver=driver, timeout=5)
+
+            driver.get("https://www.boatrace.jp/owpc/pc/login")
+
+            wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
+            wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
+            wait.until(EC.element_to_be_clickable((By.ID, "in_PassWord"))).send_keys(AUTH_PASSWORD)
+            wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
+            wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
+
+            driver.switch_to.window(driver.window_handles[1])
+
+            special_notice_wait = WebDriverWait(driver=driver, timeout=2)
+            try:
+                special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+                _logger.info("Checked all as read.")
+            except TimeoutException:
+                pass
+            try:
+                special_notice_wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+                _logger.info("Closed special notice.")
+            except TimeoutException:
+                pass
+
+            jyo_element = wait.until(EC.element_to_be_clickable((By.ID, f"jyo{race.venue:02d}")))
+            if jyo_element.get_attribute("class") == "border t":
+                jyo_element.click()
+                sel_race_no_element = wait.until(
+                    EC.presence_of_element_located((By.ID, f"selRaceNo{str(race.race_number).zfill(2)}"))
                 )
-
-                if bet_ticket_list:
+                if "current" in sel_race_no_element.get_attribute("class"):
                     for bet_ticket in bet_ticket_list:
                         wait.until(EC.element_to_be_clickable((By.ID, f"regbtn_{bet_ticket.first}_1"))).click()
                         wait.until(EC.element_to_be_clickable((By.ID, f"regbtn_{bet_ticket.second}_2"))).click()
@@ -3103,10 +3107,8 @@ def daily():
         )
         for race in race_list:
             deadline = datetime.strptime(race.deadline, "%H:%M")
-            deadline_before_5_minutes = deadline - timedelta(minutes=5)
-            schedule.every().day.at(deadline_before_5_minutes.strftime("%H:%M")).do(
-                run_thread, partial(predict, race_id=race.id)
-            )
+            predict_time = deadline - timedelta(minutes=5)
+            schedule.every().day.at(predict_time.strftime("%H:%M")).do(run_thread, partial(predict, race_id=race.id))
     except Exception:
         _logger.exception("Failed to execute daily task.")
         SESSION.rollback()
