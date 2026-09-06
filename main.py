@@ -2160,7 +2160,7 @@ def predict(race_id: int):
             _logger.info(f"Rescheduled predict(): race_id={race.id}")
             return
 
-        save_result_time = latest_deadline + timedelta(minutes=55)
+        save_result_time = latest_deadline + timedelta(minutes=30)
         schedule.every().day.at(save_result_time.strftime("%H:%M")).do(
             run_thread, partial(save_result, race_id=race.id)
         )
