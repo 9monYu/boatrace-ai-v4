@@ -53,7 +53,7 @@ from models import PeriodStat, Race, Racer, Ticket, VenueStat
 
 _logger = logging.getLogger(__name__)
 
-DAILY_TIME = "06:00"
+DAILY_TIME = "07:00"
 CHARGE_TIME = "08:00"
 
 DAILY_BET_AMOUNT = 100
@@ -1006,7 +1006,7 @@ def scrape(target_date: date):
             writer = csv.writer(f)
             writer.writerow(odds_list)
 
-        time_module.sleep(5)
+        time_module.sleep(1)
 
 
 def import_scraping_data(target_date: date):
