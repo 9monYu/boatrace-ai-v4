@@ -2667,6 +2667,8 @@ def bet(race_id: int):
             wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
 
             driver.switch_to.window(driver.window_handles[1])
+            time_module.sleep(1)
+            driver.set_window_size(1920, 1080)
 
             special_notice_wait = WebDriverWait(driver=driver, timeout=2)
             try:
@@ -2957,6 +2959,8 @@ def charge():
             wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
             wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
             driver.switch_to.window(driver.window_handles[1])
+            time_module.sleep(1)
+            driver.set_window_size(1920, 1080)
             special_notice_wait = WebDriverWait(driver=driver, timeout=2)
             try:
                 special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
