@@ -2482,6 +2482,7 @@ def predict(race_id: int):
                     )
                     [deltas] = model.predict(predict_df, raw_score=True)
                     deltas_list.append(deltas)
+                    del model
 
                 for trifecta_index, trifecta in enumerate(TRIFECTA_LIST):
                     delta = statistics.mean(deltas[trifecta_index] for deltas in deltas_list)
