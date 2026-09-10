@@ -2154,8 +2154,8 @@ def predict(race_id: int):
         ]
 
         latest_deadline = datetime.strptime(deadline_list[race.race_number - 1], "%H:%M")
-        if datetime.combine(date.today(), latest_deadline.time()) - datetime.now() >= timedelta(minutes=10):
-            predict_time = latest_deadline - timedelta(minutes=5)
+        if datetime.combine(date.today(), latest_deadline.time()) - datetime.now() >= timedelta(minutes=5):
+            predict_time = latest_deadline - timedelta(minutes=3)
             schedule.every().day.at(predict_time.strftime("%H:%M")).do(run_thread, partial(predict, race_id=race.id))
             _logger.info(f"Rescheduled predict(): race_id={race.id}")
             return
@@ -2516,10 +2516,10 @@ def predict(race_id: int):
                     SESSION.rollback()
                     raise
 
-                bet_time = latest_deadline - timedelta(seconds=40)
+                bet_time = latest_deadline - timedelta(seconds=30)
                 with bet_schedule_lock:
                     while any(job.at_time == bet_time.time() for job in schedule.get_jobs("bet")):
-                        bet_time -= timedelta(seconds=20)
+                        bet_time -= timedelta(seconds=15)
                         _logger.info(f"Adjusted bet time: race_id={race_id}, bet_time={bet_time.strftime('%H:%M:%S')}")
                     schedule.every().day.at(bet_time.strftime("%H:%M:%S")).do(
                         run_thread, partial(bet, race_id=race_id)
@@ -3112,7 +3112,7 @@ def daily():
         )
         for race in race_list:
             deadline = datetime.strptime(race.deadline, "%H:%M")
-            predict_time = deadline - timedelta(minutes=5)
+            predict_time = deadline - timedelta(minutes=3)
             schedule.every().day.at(predict_time.strftime("%H:%M")).do(run_thread, partial(predict, race_id=race.id))
     except Exception:
         _logger.exception("Failed to execute daily task.")
