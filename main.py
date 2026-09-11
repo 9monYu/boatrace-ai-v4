@@ -2097,8 +2097,8 @@ def predict(race_id: int):
                 time_module.sleep(5)
 
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
-        soup = beautifulsoup.find("h3", class_="title12_title is-type1")
-        if soup is not None and soup.text == "レース中止":
+        tag = beautifulsoup.find("h3", class_="title12_title is-type1")
+        if tag and tag.get_text(strip=True) == "レース中止":
             race.is_cancel = 1
             race.grade = None
             race.is_last_day = None
@@ -2754,8 +2754,10 @@ def save_result(race_id):
                 time_module.sleep(5)
 
         beautifulsoup = BeautifulSoup(response.text, "html.parser")
-        soup = beautifulsoup.find("h3", class_="title12_title is-type1")
-        if soup is not None and soup.text == "レース中止":
+        tag = beautifulsoup.find("h3", class_="title12_title is-type1")
+        is_cancel = tag and tag.get_text(strip=True) == "レース中止"
+        is_no_data = tag and tag.get_text(strip=True) == "※ データはありません。"
+        if is_cancel:
             race.is_cancel = 1
             race.grade = None
             race.is_last_day = None
@@ -2782,6 +2784,13 @@ def save_result(race_id):
             race.odds_quinella = None
             SESSION.query(Racer).filter(Racer.race_id == race_id).delete()
             SESSION.query(Ticket).filter(Ticket.race_id == race_id).delete()
+        elif is_no_data or beautifulsoup.select_one("div.grid.is-type2.h-clear.h-mt10") is None:
+            save_result_time = datetime.now() + timedelta(minutes=10)
+            schedule.every().day.at(save_result_time.strftime("%H:%M")).do(
+                run_thread, partial(save_result, race_id=race.id)
+            )
+            _logger.info(f"Rescheduled save_result(): race_id={race.id}")
+            return
         else:
             race.is_cancel = 0
 
