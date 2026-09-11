@@ -25,7 +25,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, tuple_
 from sqlalchemy.exc import SQLAlchemyError
 
 from config.config import (
@@ -2619,13 +2619,27 @@ def bet(race_id: int):
                 Ticket.race_id == race_id,
                 or_(
                     and_(
-                        Ticket.first.in_([2, 3]),
+                        Ticket.first == 2,
+                        Ticket.second == 1,
                         Ticket.before_deadline_odds >= 1.0,
                         Ticket.before_deadline_odds < 100.0,
                         Ticket.before_deadline_odds_expected_value >= 1.30,
                     ),
                     and_(
-                        Ticket.first.in_([2, 3, 4, 5]),
+                        tuple_(Ticket.first, Ticket.second).in_(
+                            [
+                                (2, 1),
+                                (2, 3),
+                                (2, 4),
+                                (3, 1),
+                                (3, 2),
+                                (4, 3),
+                                (4, 5),
+                                (4, 6),
+                                (5, 1),
+                                (5, 2),
+                            ]
+                        ),
                         Ticket.before_deadline_odds >= 100.0,
                         Ticket.before_deadline_odds < 400.0,
                         Ticket.before_deadline_odds_expected_value >= 1.15,

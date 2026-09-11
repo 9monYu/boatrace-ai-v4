@@ -4,7 +4,7 @@ import os
 import statistics
 from datetime import datetime
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, tuple_
 from tqdm import tqdm
 
 from constants import SESSION
@@ -65,7 +65,7 @@ def main():
         for race in tqdm(race_list):
             bet_unit = 100
             if bankroll is not None:
-                bet_unit = bankroll // 100000 * 100
+                bet_unit = bankroll // 200000 * 100
                 if bet_unit < 100:
                     bet_unit = 100
                 elif bet_unit > 5000:
@@ -78,13 +78,27 @@ def main():
                     Ticket.race_id == race.id,
                     or_(
                         and_(
-                            Ticket.first.in_([2, 3]),
+                            Ticket.first == 2,
+                            Ticket.second == 1,
                             Ticket.deadline_odds >= 1.0,
                             Ticket.deadline_odds < 100.0,
                             Ticket.deadline_odds_expected_value >= 1.30,
                         ),
                         and_(
-                            Ticket.first.in_([2, 3, 4, 5]),
+                            tuple_(Ticket.first, Ticket.second).in_(
+                                [
+                                    (2, 1),
+                                    (2, 3),
+                                    (2, 4),
+                                    (3, 1),
+                                    (3, 2),
+                                    (4, 3),
+                                    (4, 5),
+                                    (4, 6),
+                                    (5, 1),
+                                    (5, 2),
+                                ]
+                            ),
                             Ticket.deadline_odds >= 100.0,
                             Ticket.deadline_odds < 400.0,
                             Ticket.deadline_odds_expected_value >= 1.15,
