@@ -209,7 +209,6 @@ __marimo__/
 # boatrace-ai-v4
 /backfill/*
 !/backfill/.gitkeep
-/chromedriver.exe
 /config/config.py
 /database/*
 !/database/.gitkeep
@@ -217,17 +216,21 @@ __marimo__/
 !/dataset/.gitkeep
 /logs/*
 !/logs/.gitkeep
-/memo*.md
 /models/*
 !/models/.gitkeep
 /official_data/race/*.TXT
 /official_data/race/*.lzh
 /official_data/result/*.TXT
 /official_data/result/*.lzh
-/sample*.py
 /screenshots/*
 !/screenshots/.gitkeep
 /temp/*
 !/temp/.gitkeep
+
+/memo*.md
+/hoge*.py
+/huga*.py
+/hoge*.sh
+/huga*.sh
 
 .DS_Store
