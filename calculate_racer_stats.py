@@ -1,5 +1,3 @@
-from datetime import date
-
 import numpy
 from tqdm import tqdm
 
@@ -12,7 +10,6 @@ def main():
     latest_race = SESSION.query(Race).order_by(Race.id.desc()).first()
 
     for year in range(oldest_race.date // 10000 + 1, latest_race.date // 10000 + 1):
-        print(year)
         race_list = (
             SESSION.query(Race)
             .filter(
@@ -23,7 +20,7 @@ def main():
             .order_by(Race.id.asc())
             .all()
         )
-        for race in tqdm(race_list):
+        for race in tqdm(race_list, desc=f"{year}"):
             racer_list = SESSION.query(Racer).filter(Racer.race_id == race.id).order_by(Racer.boat_number.asc()).all()
             for racer in racer_list:
                 last5_1st_count = 0

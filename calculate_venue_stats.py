@@ -1,5 +1,3 @@
-from datetime import date
-
 from tqdm import tqdm
 
 from constants import SESSION
@@ -8,10 +6,14 @@ from models import Race, Racer, VenueStat
 
 def main():
     oldest_race = SESSION.query(Race).order_by(Race.id.asc()).first()
+    latest_race = SESSION.query(Race).order_by(Race.id.desc()).first()
 
-    for year in tqdm(range(oldest_race.date // 10000, date.today().year)):
+    for year in range(
+        oldest_race.date // 10000,
+        (latest_race.date // 10000) + 1 if latest_race.date % 10000 == 1231 else latest_race.date // 10000,
+    ):
         venue_stat_list = []
-        for venue in range(1, 25):
+        for venue in tqdm(range(1, 25), desc=f"{year}"):
             normal_entry_race_count = 0
             normal_entry_course1_1st_count = 0
             normal_entry_course1_2nd_count = 0

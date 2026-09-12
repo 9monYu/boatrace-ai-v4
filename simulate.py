@@ -62,7 +62,10 @@ def main():
         bet_odds_list = []
         hit_odds_list = []
         bankroll = args.bankroll
-        for race in tqdm(race_list):
+        progress_bar = tqdm(race_list)
+        for index, race in enumerate(progress_bar):
+            if index % 100 == 0:
+                progress_bar.set_description(f"{race.id}")
             bet_unit = 100
             if bankroll is not None:
                 bet_unit = bankroll // 200000 * 100

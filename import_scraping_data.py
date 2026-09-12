@@ -11,7 +11,7 @@ from models import Race, Racer, Ticket
 def main():
     # race
     directory_path = os.path.join(os.getcwd(), "scraping_data", "race")
-    for file in tqdm(os.listdir(directory_path)):
+    for file in tqdm(os.listdir(directory_path), desc=f"{'race':<6}"):
         if file.endswith(".csv") and file.startswith("race_"):
             with open(os.path.join(directory_path, file), "r", encoding="UTF-8") as f:
                 for row in csv.reader(f):
@@ -38,7 +38,7 @@ def main():
 
     # racer
     directory_path = os.path.join(os.getcwd(), "scraping_data", "racer")
-    for file in tqdm(os.listdir(directory_path)):
+    for file in tqdm(os.listdir(directory_path), desc=f"{'result':<6}"):
         if file.endswith(".csv") and file.startswith("racer_"):
             race_id_list = []
             racer_list = []
@@ -363,7 +363,7 @@ def main():
 
     # deadline odds
     directory_path = os.path.join(os.getcwd(), "scraping_data", "deadline_odds")
-    for file in tqdm(os.listdir(directory_path)):
+    for file in tqdm(os.listdir(directory_path), desc=f"{'odds':<6}"):
         if file.endswith(".csv") and file.startswith("deadline_odds_"):
             ticket_list = []
             with open(os.path.join(directory_path, file), "r", encoding="UTF-8") as f:
