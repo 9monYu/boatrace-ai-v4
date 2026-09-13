@@ -28,6 +28,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from sqlalchemy import and_, or_, tuple_
 from sqlalchemy.exc import SQLAlchemyError
 
+import mail
 from config.config import (
     AUTH_PASSWORD,
     BET_PASSWORD,
@@ -2527,6 +2528,11 @@ def predict(race_id: int):
     except Exception:
         _logger.exception(f"Failed to predict: race_id={race_id}")
         SESSION.rollback()
+        mail.send(
+            "⚠️ PREDICT ERROR",
+            f"💻\nhttps://www.boatrace.jp/owpc/pc/race/racelist?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}\n\n"
+            f"📱\nhttps://www.boatrace.jp/owsp/sp/race/racelist?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}",
+        )
     finally:
         SESSION.remove()
 
@@ -2739,6 +2745,11 @@ def bet(race_id: int):
         except Exception:
             pass
         SESSION.rollback()
+        mail.send(
+            "⚠️ BET ERROR",
+            f"💻\nhttps://www.boatrace.jp/owpc/pc/race/racelist?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}\n\n"
+            f"📱\nhttps://www.boatrace.jp/owsp/sp/race/racelist?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}",
+        )
     finally:
         try:
             driver.quit()
@@ -2928,6 +2939,11 @@ def save_result(race_id):
     except Exception:
         _logger.exception(f"Failed to save result: race_id={race_id}")
         SESSION.rollback()
+        mail.send(
+            "⚠️ SAVE RESULT ERROR",
+            f"💻\nhttps://www.boatrace.jp/owpc/pc/race/raceresult?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}\n\n"
+            f"📱\nhttps://www.boatrace.jp/owsp/sp/race/raceresult?rno={int(str(race_id)[10:12])}&jcd={str(race_id)[8:10]}&hd={str(race_id)[:8]}",
+        )
     finally:
         SESSION.remove()
 
@@ -3012,6 +3028,7 @@ def charge():
             )
         except Exception:
             pass
+        mail.send("⚠️ CHARGE ERROR", "")
     finally:
         try:
             driver.quit()
@@ -3140,6 +3157,7 @@ def daily():
     except Exception:
         _logger.exception("Failed to execute daily task.")
         SESSION.rollback()
+        mail.send("⚠️ DAILY TASK ERROR", "")
     finally:
         SESSION.remove()
 
