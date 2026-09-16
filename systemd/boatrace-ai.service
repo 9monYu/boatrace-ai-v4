@@ -1,0 +1,8 @@
+[Unit]
+Description=BOAT RACE AI
+OnFailure=boatrace-ai-failure-mail.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/boatrace-ai-v4
+ExecStart=/root/boatrace-ai-v4/venv/bin/python -B /root/boatrace-ai-v4/main.py
