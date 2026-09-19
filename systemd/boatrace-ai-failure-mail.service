@@ -4,4 +4,4 @@ Description=BOAT RACE AI Failure Mail
 [Service]
 Type=oneshot
 WorkingDirectory=/root/boatrace-ai-v4
-ExecStart=/root/boatrace-ai-v4/venv/bin/python -c "import mail; mail.send('🚨 SYSTEM ERROR 🚨', '')"
+ExecStart=/root/boatrace-ai-v4/venv/bin/python -Bc "import mail; mail.send('🚨 SYSTEM ERROR 🚨', '')"
