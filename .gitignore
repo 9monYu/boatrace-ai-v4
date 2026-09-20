@@ -214,6 +214,8 @@ __marimo__/
 !/database/.gitkeep
 /dataset/*
 !/dataset/.gitkeep
+/local/*
+!/local/.gitkeep
 /logs/*
 !/logs/.gitkeep
 /models/*
@@ -226,11 +228,5 @@ __marimo__/
 !/screenshots/.gitkeep
 /temp/*
 !/temp/.gitkeep
-
-/memo*.md
-/hoge*.py
-/huga*.py
-/hoge*.sh
-/huga*.sh
 
 .DS_Store
