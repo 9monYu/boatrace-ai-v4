@@ -476,7 +476,7 @@ def scrape(target_date: int):
         boat6_before_info_list = [None, None, None, None, None, None]
 
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-        #  temperature
+        # temperature
         try:
             before_info_temperature = float(
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
@@ -708,7 +708,7 @@ def scrape(target_date: int):
         boat6_result_list = [None, None, None, None]
 
         soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-        #  temperature
+        # temperature
         try:
             temperature = float(
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")

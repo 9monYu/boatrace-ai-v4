@@ -539,19 +539,19 @@ def scrape(target_date: date):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_temperature': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_temperature': race_id={race.id}")
         # weather
         try:
             before_info_weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_weather': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_weather': race_id={race.id}")
         # wind speed
         try:
             before_info_wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wind_speed': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_wind_speed': race_id={race.id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -559,21 +559,21 @@ def scrape(target_date: date):
                     before_info_wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wind_direction': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_wind_direction': race_id={race.id}")
         # water temperature
         try:
             before_info_water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_water_temperature': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_water_temperature': race_id={race.id}")
         # wave height
         try:
             before_info_wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wave_height': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'before_info_wave_height': race_id={race.id}")
 
         # course
         # start timing
@@ -771,19 +771,19 @@ def scrape(target_date: date):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'temperature': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'temperature': race_id={race.id}")
         # weather
         try:
             weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
         except Exception:
-            _logger.exception(f"Failed to scrape 'weather': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'weather': race_id={race.id}")
         # wind speed
         try:
             wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'wind_speed': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'wind_speed': race_id={race.id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -791,21 +791,21 @@ def scrape(target_date: date):
                     wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception(f"Failed to scrape 'wind_direction': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'wind_direction': race_id={race.id}")
         # water temperature
         try:
             water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'water_temperature': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'water_temperature': race_id={race.id}")
         # wave height
         try:
             wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'wave_height': race_id={race.id}")
+            _logger.warning(f"Failed to scrape 'wave_height': race_id={race.id}")
 
         # winning style
         try:
@@ -2356,21 +2356,21 @@ def predict(race_id: int):
                 soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_temperature': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_temperature': race_id={race_id}")
         # weather
         try:
             race.before_info_weather = (
                 soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_weather': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_weather': race_id={race_id}")
         # wind speed
         try:
             race.before_info_wind_speed = int(
                 soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wind_speed': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_wind_speed': race_id={race_id}")
         # wind direction
         try:
             for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -2378,21 +2378,21 @@ def predict(race_id: int):
                     race.before_info_wind_direction = int(class_.replace("is-wind", ""))
                     break
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wind_direction': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_wind_direction': race_id={race_id}")
         # water temperature
         try:
             race.before_info_water_temperature = float(
                 soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_water_temperature': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_water_temperature': race_id={race_id}")
         # wave height
         try:
             race.before_info_wave_height = int(
                 soup_list[5].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("cm", "")
             )
         except Exception:
-            _logger.exception(f"Failed to scrape 'before_info_wave_height': race_id={race_id}")
+            _logger.warning(f"Failed to scrape 'before_info_wave_height': race_id={race_id}")
 
         racer_dict = {racer.boat_number: racer for racer in SESSION.query(Racer).filter(Racer.race_id == race_id).all()}
 
@@ -2820,25 +2820,25 @@ def save_result(race_id):
             race.is_cancel = 0
 
             soup_list = beautifulsoup.find_all("div", class_="weather1_bodyUnit")
-            #  temperature
+            # temperature
             try:
                 race.temperature = float(
                     soup_list[0].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
                 )
             except Exception:
-                _logger.exception(f"Failed to scrape 'temperature': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'temperature': race_id={race_id}")
             # weather
             try:
                 race.weather = soup_list[1].find("span", class_="weather1_bodyUnitLabelTitle").get_text(strip=True)
             except Exception:
-                _logger.exception(f"Failed to scrape 'weather': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'weather': race_id={race_id}")
             # wind speed
             try:
                 race.wind_speed = int(
                     soup_list[2].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("m", "")
                 )
             except Exception:
-                _logger.exception(f"Failed to scrape 'wind_speed': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'wind_speed': race_id={race_id}")
             # wind direction
             try:
                 for class_ in soup_list[3].find("p", class_="weather1_bodyUnitImage").get("class"):
@@ -2846,14 +2846,14 @@ def save_result(race_id):
                         race.wind_direction = int(class_.replace("is-wind", ""))
                         break
             except Exception:
-                _logger.exception(f"Failed to scrape 'wind_direction': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'wind_direction': race_id={race_id}")
             # water temperature
             try:
                 race.water_temperature = float(
                     soup_list[4].find("span", class_="weather1_bodyUnitLabelData").get_text(strip=True).replace("℃", "")
                 )
             except Exception:
-                _logger.exception(f"Failed to scrape 'water_temperature': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'water_temperature': race_id={race_id}")
             # wave height
             try:
                 race.wave_height = int(
@@ -2863,7 +2863,7 @@ def save_result(race_id):
                     .replace("cm", "")
                 )
             except Exception:
-                _logger.exception(f"Failed to scrape 'wave_height': race_id={race_id}")
+                _logger.warning(f"Failed to scrape 'wave_height': race_id={race_id}")
 
             # winning style
             try:
@@ -3168,7 +3168,7 @@ def main():
     handler = TimedRotatingFileHandler(
         filename=os.path.join(os.getcwd(), "logs", "boatrace-ai-v4.log"),
         when="midnight",
-        backupCount=7,
+        backupCount=30,
         encoding="utf-8",
         atTime=time(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone(timedelta(hours=+9), "JST")),
     )
