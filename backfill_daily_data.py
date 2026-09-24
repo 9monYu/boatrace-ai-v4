@@ -50,7 +50,7 @@ def download(url: str, target_date: int):
         {
             "profile.managed_default_content_settings.images": 2,
             "credentials_enable_service": False,
-            "download.default_directory": os.path.join(os.getcwd(), "backfill"),
+            "download.default_directory": os.path.join(os.getcwd(), "temp"),
             "download_bubble.partial_view_enabled": False,
         },
     )
@@ -83,7 +83,7 @@ def download(url: str, target_date: int):
 
 
 def decompress(file_name: str):
-    directory_path = os.path.join(os.getcwd(), "backfill")
+    directory_path = os.path.join(os.getcwd(), "temp")
     file_path = os.path.join(directory_path, file_name)
     file = lhafile.LhaFile(file_path)
     for info in file.infolist():
@@ -98,7 +98,7 @@ def import_official_data(target_date: int):
     month = (target_date // 100) % 100
     day = target_date % 100
     # race
-    with open(os.path.join(os.getcwd(), "backfill", f"B{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"B{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         day_number = None
         if 5 <= month <= 10:
@@ -147,7 +147,7 @@ def import_official_data(target_date: int):
     SESSION.commit()
 
     # result
-    with open(os.path.join(os.getcwd(), "backfill", f"K{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"K{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
         venue = None
         for line in f:
             bgn_match = re.match(r"^([0-9]{2})(KBGN)", line)
@@ -875,7 +875,7 @@ def scrape(target_date: int):
         racer_list[5].extend(boat6_result_list)
 
         with open(
-            os.path.join(os.getcwd(), "backfill", f"race_{target_date}.csv"),
+            os.path.join(os.getcwd(), "temp", f"race_{target_date}.csv"),
             mode="a",
             encoding="UTF-8",
             newline="",
@@ -904,7 +904,7 @@ def scrape(target_date: int):
             )
 
         with open(
-            os.path.join(os.getcwd(), "backfill", f"racer_{target_date}.csv"),
+            os.path.join(os.getcwd(), "temp", f"racer_{target_date}.csv"),
             mode="a",
             encoding="UTF-8",
             newline="",
@@ -942,7 +942,7 @@ def scrape(target_date: int):
             if index == 119:
                 break
         with open(
-            os.path.join(os.getcwd(), "backfill", f"deadline_odds_{target_date}.csv"),
+            os.path.join(os.getcwd(), "temp", f"deadline_odds_{target_date}.csv"),
             mode="a",
             encoding="UTF-8",
             newline="",
@@ -950,12 +950,12 @@ def scrape(target_date: int):
             writer = csv.writer(f)
             writer.writerow(odds_list)
 
-        time.sleep(5)
+        time.sleep(1)
 
 
 def import_scraping_data(target_date: int):
     # race
-    with open(os.path.join(os.getcwd(), "backfill", f"race_{target_date}.csv"), "r", encoding="UTF-8") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"race_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row[0])
             race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
@@ -981,7 +981,7 @@ def import_scraping_data(target_date: int):
     # racer
     race_id_list = []
     racer_list = []
-    with open(os.path.join(os.getcwd(), "backfill", f"racer_{target_date}.csv"), "r", encoding="UTF-8") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"racer_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row[0])
             if race_id not in race_id_list:
@@ -1281,7 +1281,7 @@ def import_scraping_data(target_date: int):
 
     # deadline odds
     ticket_list = []
-    with open(os.path.join(os.getcwd(), "backfill", f"deadline_odds_{target_date}.csv"), "r", encoding="UTF-8") as f:
+    with open(os.path.join(os.getcwd(), "temp", f"deadline_odds_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row.pop(0))
             race = SESSION.query(Race).filter(Race.id == race_id).one()
@@ -1430,7 +1430,7 @@ def calculate_stats(target_date: int):
 
 def predict(target_date: int):
     with open(
-        os.path.join(os.getcwd(), "backfill", f"predict_{target_date}.csv"), mode="w", encoding="UTF-8", newline=""
+        os.path.join(os.getcwd(), "temp", f"predict_{target_date}.csv"), mode="w", encoding="UTF-8", newline=""
     ) as f:
         writer = csv.writer(f)
         writer.writerow(CSV_COLUMN_LIST[:-1])
@@ -2066,8 +2066,8 @@ def predict(target_date: int):
                     row.append(round(course_3rd_rate_list[4] - course_3rd_rate_list[5], 2))
                     writer.writerow(row)
 
-    if os.path.exists(os.path.join(os.getcwd(), "backfill", f"predict_{target_date}.csv")):
-        predict_df = pandas.read_csv(os.path.join(os.getcwd(), "backfill", f"predict_{target_date}.csv"), index_col=0)
+    if os.path.exists(os.path.join(os.getcwd(), "temp", f"predict_{target_date}.csv")):
+        predict_df = pandas.read_csv(os.path.join(os.getcwd(), "temp", f"predict_{target_date}.csv"), index_col=0)
 
         deltas_list = []
         for seed in range(SEED_COUNT):
@@ -2125,13 +2125,6 @@ def main():
         print("ERROR")
         return
 
-    try:
-        for file_name in os.listdir(os.path.join(os.getcwd(), "backfill")):
-            if file_name != ".gitkeep":
-                os.remove(os.path.join(os.getcwd(), "backfill", file_name))
-    except Exception:
-        pass
-
     current_date = start_date
 
     while current_date <= end_date:
@@ -2140,9 +2133,9 @@ def main():
         download("https://www1.mbrace.or.jp/od2/B/dindex.html", target_date)
         download("https://www1.mbrace.or.jp/od2/K/dindex.html", target_date)
 
-        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"B{target_date % 1000000}.lzh")):
+        if os.path.exists(os.path.join(os.getcwd(), "temp", f"B{target_date % 1000000}.lzh")):
             decompress(f"B{target_date % 1000000}.lzh")
-        if os.path.exists(os.path.join(os.getcwd(), "backfill", f"K{target_date % 1000000}.lzh")):
+        if os.path.exists(os.path.join(os.getcwd(), "temp", f"K{target_date % 1000000}.lzh")):
             decompress(f"K{target_date % 1000000}.lzh")
 
         import_official_data(target_date)

@@ -207,8 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 # boatrace-ai-v4
-/backfill/*
-!/backfill/.gitkeep
 /config/config.py
 /database/*
 !/database/.gitkeep
