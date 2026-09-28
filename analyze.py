@@ -60,7 +60,7 @@ def main():
         third = [1, 2, 3, 4, 5, 6] if third == "9" else [int(x) for x in third]
         for year in args.years:
             with open(
-                os.path.join(os.getcwd(), "temp", f"analysis_{trifecta}_{year}.csv"),
+                os.path.join(os.getcwd(), "temp", f"analysis_{trifecta}_{year}.tsv"),
                 "w",
                 newline="",
                 encoding="utf-8",
@@ -135,7 +135,7 @@ def main():
             (200.0, 400.0),
         ]:
             with open(
-                os.path.join(os.getcwd(), "temp", f"analysis_{trifecta}_{odds[0]}-{odds[1]}.csv"),
+                os.path.join(os.getcwd(), "temp", f"analysis_{trifecta}_{odds[0]}-{odds[1]}.tsv"),
                 "w",
                 newline="",
                 encoding="utf-8",

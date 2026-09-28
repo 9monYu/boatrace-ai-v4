@@ -25,7 +25,7 @@ def main():
         return
 
     with open(
-        os.path.join(os.getcwd(), "temp", f"simulation_{args.start_date}_{args.end_date}.csv"),
+        os.path.join(os.getcwd(), "temp", f"simulation_{args.start_date}_{args.end_date}.tsv"),
         "w",
         newline="",
         encoding="utf-8",
