@@ -101,25 +101,7 @@ source venv/bin/activate
 alembic upgrade head
 ```
 
-### 3. 設定ファイル
-
-`config/config.py`
-
-```python
-SUBSCRIBER_NUMBER = "12345678"
-PASSWORD_NUMBER = "1234"
-AUTH_PASSWORD = "123456"
-BET_PASSWORD = "123456"
-
-PAYPAY_BANK_STORE_NUMBER = "123"
-PAYPAY_BANK_ACCOUNT_NUMBER = "1234567"
-PAYPAY_BANK_PASSWORD = "1234567890"
-
-GMAIL = "abcd1234@gmail.com"
-APP_PASSWORD = "abcdefghijklmnop"
-```
-
-### 4. 公式データ
+### 3. 公式データ
 
 [BOAT RACE ダウンロード・他](https://www.boatrace.jp/owpc/pc/extra/data/download.html)
 
@@ -131,7 +113,7 @@ python decompress.py
 python import_official_data.py
 ```
 
-### 5. スクレイピングデータ
+### 4. スクレイピングデータ
 
 ```zsh
 python scrape.py 20180101 20261231
@@ -139,7 +121,7 @@ python scrape.py 20180101 20261231
 python import_scraping_data.py
 ```
 
-### 6. スタッツ計算
+### 5. スタッツ計算
 
 ```zsh
 python calculate_venue_stats.py
@@ -177,7 +159,25 @@ python simulate.py 20230101 20261231
 
 ## ⚙️ 運用
 
-### 1. systemd
+### 1. 設定ファイル
+
+`config/config.py`
+
+```python
+SUBSCRIBER_NUMBER = "12345678"
+PASSWORD_NUMBER = "1234"
+AUTH_PASSWORD = "123456"
+BET_PASSWORD = "123456"
+
+PAYPAY_BANK_STORE_NUMBER = "123"
+PAYPAY_BANK_ACCOUNT_NUMBER = "1234567"
+PAYPAY_BANK_PASSWORD = "1234567890"
+
+GMAIL = "abcd1234@gmail.com"
+APP_PASSWORD = "abcdefghijklmnop"
+```
+
+### 2. systemd
 
 ```zsh
 cp systemd/*.service /etc/systemd/system/
@@ -185,7 +185,7 @@ cp systemd/*.service /etc/systemd/system/
 systemctl daemon-reload
 ```
 
-### 2. cron
+### 3. cron
 
 ```zsh
 crontab -e
