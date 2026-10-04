@@ -56,6 +56,7 @@ _logger = logging.getLogger(__name__)
 
 DAILY_TIME = "07:00"
 CHARGE_TIME = "08:00"
+MIDNIGHT_RACE_ACCOUNT_TIME = "23:30"
 
 DAILY_BET_AMOUNT = 100
 
@@ -3036,6 +3037,73 @@ def charge():
             pass
 
 
+def account():
+    _logger.info("Starting account()")
+
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = "eager"
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument(f"--user-agent={USER_AGENT}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    if platform.system() == "Linux":
+        chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    chrome_options.add_experimental_option(
+        "prefs",
+        {
+            "profile.managed_default_content_settings.images": 2,
+            "credentials_enable_service": False,
+            "download.default_directory": os.path.join(os.getcwd(), "temp"),
+            "download_bubble.partial_view_enabled": False,
+        },
+    )
+
+    try:
+        driver = webdriver.Chrome(options=chrome_options)
+        wait = WebDriverWait(driver=driver, timeout=5)
+        driver.get("https://www.boatrace.jp/owpc/pc/login")
+        wait.until(EC.element_to_be_clickable((By.ID, "in_KanyusyaNo"))).send_keys(SUBSCRIBER_NUMBER)
+        wait.until(EC.element_to_be_clickable((By.ID, "in_AnsyoNo"))).send_keys(PASSWORD_NUMBER)
+        wait.until(EC.element_to_be_clickable((By.ID, "in_PassWord"))).send_keys(AUTH_PASSWORD)
+        wait.until(EC.element_to_be_clickable((By.NAME, "TENTP017A_2"))).click()
+        wait.until(EC.element_to_be_clickable((By.ID, "commonHead"))).click()
+        driver.switch_to.window(driver.window_handles[1])
+        time_module.sleep(1)
+        driver.set_window_size(1920, 1080)
+        special_notice_wait = WebDriverWait(driver=driver, timeout=2)
+        try:
+            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "isAllread"))).click()
+            _logger.info("Checked all as read.")
+        except TimeoutException:
+            pass
+        try:
+            special_notice_wait.until(EC.element_to_be_clickable((By.ID, "newsoverviewdispCloseButton"))).click()
+            _logger.info("Closed special notice.")
+        except TimeoutException:
+            pass
+        wait.until(EC.element_to_be_clickable((By.ID, "gnavi01"))).click()
+        wait.until(EC.element_to_be_clickable((By.ID, "account"))).click()
+        wait.until(EC.element_to_be_clickable((By.ID, "accountBetPassword"))).send_keys(BET_PASSWORD)
+        wait.until(EC.element_to_be_clickable((By.ID, "executeAccount"))).click()
+        wait.until(EC.element_to_be_clickable((By.ID, "ok"))).click()
+        time_module.sleep(5)
+    except Exception:
+        _logger.exception("Failed to account.")
+        try:
+            driver.save_screenshot(
+                os.path.join(os.getcwd(), "screenshots", f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            )
+        except Exception:
+            pass
+        mail.send("⚠️ ACCOUNT ERROR", "")
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass
+
+
 def daily():
     _logger.info("Starting daily()")
 
@@ -3150,6 +3218,10 @@ def daily():
         race_list = (
             SESSION.query(Race).filter(Race.date == int(today.strftime("%Y%m%d"))).order_by(Race.deadline.asc()).all()
         )
+
+        if race_list and race_list[-1].deadline >= "21:00":
+            schedule.every().day.at(MIDNIGHT_RACE_ACCOUNT_TIME).do(account)
+
         for race in race_list:
             deadline = datetime.strptime(race.deadline, "%H:%M")
             predict_time = deadline - timedelta(minutes=3)
