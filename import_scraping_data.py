@@ -38,7 +38,7 @@ def main():
 
     # racer
     directory_path = os.path.join(os.getcwd(), "scraping_data", "racer")
-    for file in tqdm(os.listdir(directory_path), desc=f"{'result':<6}"):
+    for file in tqdm(os.listdir(directory_path), desc=f"{'racer':<6}"):
         if file.endswith(".csv") and file.startswith("racer_"):
             race_id_list = []
             racer_list = []

@@ -79,34 +79,24 @@ def main():
                 SESSION.query(Ticket)
                 .filter(
                     Ticket.race_id == race.id,
-                    or_(
-                        and_(
-                            Ticket.first == 2,
-                            Ticket.second == 1,
-                            Ticket.deadline_odds >= 1.0,
-                            Ticket.deadline_odds < 100.0,
-                            Ticket.deadline_odds_expected_value >= 1.30,
-                        ),
-                        and_(
-                            tuple_(Ticket.first, Ticket.second).in_(
-                                [
-                                    (2, 1),
-                                    (2, 3),
-                                    (2, 4),
-                                    (3, 1),
-                                    (3, 2),
-                                    (4, 3),
-                                    (4, 5),
-                                    (4, 6),
-                                    (5, 1),
-                                    (5, 2),
-                                ]
-                            ),
-                            Ticket.deadline_odds >= 100.0,
-                            Ticket.deadline_odds < 400.0,
-                            Ticket.deadline_odds_expected_value >= 1.15,
-                        ),
+                    tuple_(Ticket.first, Ticket.second).in_(
+                        [
+                            (2, 1),
+                            (2, 3),
+                            (2, 4),
+                            (3, 1),
+                            (3, 2),
+                            (4, 3),
+                            (4, 5),
+                            (4, 6),
+                            (5, 1),
+                            (5, 2),
+                        ]
                     ),
+                    Ticket.deadline_odds >= 100.0,
+                    Ticket.deadline_odds < 400.0,
+                    Ticket.deadline_odds_expected_value >= 1.15,
+                    Ticket.deadline_odds_expected_value < 1.40,
                 )
                 .all()
             )
