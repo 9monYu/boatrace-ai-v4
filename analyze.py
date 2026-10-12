@@ -2,12 +2,31 @@ import argparse
 import csv
 import os
 
+from sqlalchemy import select
 from tqdm import tqdm
 
-from constants import SESSION
+from database import Session
 from models import Race, Ticket
 
-BATCH_SIZE = 1000
+
+def race_conditions(year):
+    return (
+        Race.is_cancel == 0,
+        Race.date >= year * 10000 + 101,
+        Race.date <= year * 10000 + 1231,
+        Race.grade.is_not(None),
+        Race.venue.is_not(None),
+        Race.day_number.is_not(None),
+        Race.is_last_day.is_not(None),
+        Race.race_number.is_not(None),
+        Race.has_stabilizer.is_not(None),
+        Race.before_info_temperature.is_not(None),
+        Race.before_info_weather.is_not(None),
+        Race.before_info_wind_speed.is_not(None),
+        Race.before_info_wind_direction.is_not(None),
+        Race.before_info_water_temperature.is_not(None),
+        Race.before_info_wave_height.is_not(None),
+    )
 
 
 def main():
@@ -17,31 +36,14 @@ def main():
 
     race_list_by_year: dict[int, list[Race]] = {}
     for year in args.years:
-        race_list_by_year[year] = (
-            SESSION.query(Race)
-            .filter(
-                Race.is_cancel == 0,
-                Race.date >= year * 10000 + 101,
-                Race.date <= year * 10000 + 1231,
-                Race.grade.isnot(None),
-                Race.venue.isnot(None),
-                Race.day_number.isnot(None),
-                Race.is_last_day.isnot(None),
-                Race.race_number.isnot(None),
-                Race.has_stabilizer.isnot(None),
-                Race.before_info_temperature.isnot(None),
-                Race.before_info_weather.isnot(None),
-                Race.before_info_wind_speed.isnot(None),
-                Race.before_info_wind_direction.isnot(None),
-                Race.before_info_water_temperature.isnot(None),
-                Race.before_info_wave_height.isnot(None),
-            )
+        race_list_by_year[year] = Session.scalars(
+            select(Race)
+            .where(*race_conditions(year))
             .order_by(
                 Race.date.asc(),
                 Race.deadline.asc(),
             )
-            .all()
-        )
+        ).all()
 
     for trifecta in [
         "2345-9-9",
@@ -81,40 +83,38 @@ def main():
                         hit_money = 0
                         peak = 0
                         max_dd = 0
-                        for offset in range(0, len(race_list_by_year[year]), BATCH_SIZE):
-                            race_batch = race_list_by_year[year][offset : offset + BATCH_SIZE]
-                            ticket_list = (
-                                SESSION.query(Ticket)
-                                .filter(
-                                    Ticket.race_id.in_([race.id for race in race_batch]),
-                                    Ticket.first.in_(first),
-                                    Ticket.second.in_(second),
-                                    Ticket.third.in_(third),
-                                    Ticket.deadline_odds >= odds[0],
-                                    Ticket.deadline_odds < odds[1],
-                                    Ticket.deadline_odds_expected_value >= ev / 100,
-                                    Ticket.deadline_odds_expected_value < (ev + 5) / 100,
-                                )
-                                .all()
+                        ticket_list = Session.scalars(
+                            select(Ticket)
+                            .join(Race, Ticket.race_id == Race.id)
+                            .where(
+                                *race_conditions(year),
+                                Ticket.first.in_(first),
+                                Ticket.second.in_(second),
+                                Ticket.third.in_(third),
+                                Ticket.deadline_odds >= odds[0],
+                                Ticket.deadline_odds < odds[1],
+                                Ticket.deadline_odds_expected_value >= ev / 100,
+                                Ticket.deadline_odds_expected_value < (ev + 5) / 100,
                             )
+                        ).all()
 
-                            tickets_by_race: dict[int, list[Ticket]] = {}
-                            for ticket in ticket_list:
-                                tickets_by_race.setdefault(ticket.race_id, []).append(ticket)
+                        tickets_by_race: dict[int, list[Ticket]] = {}
+                        for ticket in ticket_list:
+                            tickets_by_race.setdefault(ticket.race_id, []).append(ticket)
 
-                            for race in race_batch:
-                                race_ticket_list = tickets_by_race.get(race.id)
-                                if race_ticket_list is not None:
-                                    bet_race += 1
-                                    for ticket in race_ticket_list:
-                                        bet_money += 100
-                                        if ticket.is_win == 1:
-                                            hit_race += 1
-                                            hit_money += round(100 * race.odds_trifecta)
-                                    if hit_money - bet_money > peak:
-                                        peak = hit_money - bet_money
-                                    if hit_money - bet_money - peak < max_dd:
-                                        max_dd = hit_money - bet_money - peak
+                        for race in race_list_by_year[year]:
+                            race_ticket_list = tickets_by_race.get(race.id)
+                            if race_ticket_list is not None:
+                                bet_race += 1
+                                for ticket in race_ticket_list:
+                                    bet_money += 100
+                                    if ticket.is_win == 1:
+                                        hit_race += 1
+                                        hit_money += round(100 * race.odds_trifecta)
+                                if hit_money - bet_money > peak:
+                                    peak = hit_money - bet_money
+                                if hit_money - bet_money - peak < max_dd:
+                                    max_dd = hit_money - bet_money - peak
 
                         hit_rate = round((hit_race / bet_race) * 100, 1) if bet_race > 0 else 0.0
                         roi = round((hit_money / bet_money) * 100, 1) if bet_money > 0 else 0.0

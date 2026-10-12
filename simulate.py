@@ -4,10 +4,10 @@ import os
 import statistics
 from datetime import datetime
 
-from sqlalchemy import and_, or_, tuple_
+from sqlalchemy import select, tuple_
 from tqdm import tqdm
 
-from constants import SESSION
+from database import Session
 from models import Race, Ticket
 
 
@@ -31,28 +31,27 @@ def main():
         encoding="utf-8",
     ) as f:
         writer = csv.writer(f, delimiter="\t")
-        race_list = (
-            SESSION.query(Race)
-            .filter(
+        race_list = Session.scalars(
+            select(Race)
+            .where(
                 Race.is_cancel == 0,
                 Race.date >= args.start_date,
                 Race.date <= args.end_date,
-                Race.grade.isnot(None),
-                Race.venue.isnot(None),
-                Race.day_number.isnot(None),
-                Race.is_last_day.isnot(None),
-                Race.race_number.isnot(None),
-                Race.has_stabilizer.isnot(None),
-                Race.before_info_temperature.isnot(None),
-                Race.before_info_weather.isnot(None),
-                Race.before_info_wind_speed.isnot(None),
-                Race.before_info_wind_direction.isnot(None),
-                Race.before_info_water_temperature.isnot(None),
-                Race.before_info_wave_height.isnot(None),
+                Race.grade.is_not(None),
+                Race.venue.is_not(None),
+                Race.day_number.is_not(None),
+                Race.is_last_day.is_not(None),
+                Race.race_number.is_not(None),
+                Race.has_stabilizer.is_not(None),
+                Race.before_info_temperature.is_not(None),
+                Race.before_info_weather.is_not(None),
+                Race.before_info_wind_speed.is_not(None),
+                Race.before_info_wind_direction.is_not(None),
+                Race.before_info_water_temperature.is_not(None),
+                Race.before_info_wave_height.is_not(None),
             )
             .order_by(Race.date.asc(), Race.deadline.asc())
-            .all()
-        )
+        ).all()
         bet_race = 0
         hit_race = 0
         bet_money = 0
@@ -75,9 +74,8 @@ def main():
                     bet_unit = 5000
                 else:
                     pass
-            ticket_list = (
-                SESSION.query(Ticket)
-                .filter(
+            ticket_list = Session.scalars(
+                select(Ticket).where(
                     Ticket.race_id == race.id,
                     tuple_(Ticket.first, Ticket.second).in_(
                         [
@@ -98,8 +96,7 @@ def main():
                     Ticket.deadline_odds_expected_value >= 1.15,
                     Ticket.deadline_odds_expected_value < 1.40,
                 )
-                .all()
-            )
+            ).all()
             if ticket_list:
                 bet_race += 1
                 for ticket in ticket_list:

@@ -2,9 +2,10 @@ import os
 import re
 from datetime import date
 
+from sqlalchemy import select
 from tqdm import tqdm
 
-from constants import SESSION
+from database import Session
 from models import PeriodStat, Race
 
 
@@ -48,7 +49,7 @@ def main():
                         hour = int(race_match.group(2))
                         minute = int(race_match.group(3))
                         race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
-                        race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                        race = Session.get(Race, race_id)
                         if race is not None:
                             race.date = int(date_)
                             race.period_progress_rate = period_progress_rate
@@ -68,8 +69,8 @@ def main():
                                     day_number=day_number,
                                 )
                             )
-    SESSION.add_all(race_list)
-    SESSION.commit()
+    Session.add_all(race_list)
+    Session.commit()
 
     # result
     result_directory_path = os.path.join(os.getcwd(), "official_data", "result")
@@ -89,7 +90,7 @@ def main():
                     if result_match is not None:
                         race_number = result_match.group(2)
                         race_id = int(f"{date_}{venue}{str(race_number).zfill(2)}")
-                        race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                        race = Session.get(Race, race_id)
                         if race is not None:
                             words = [word for word in line.split(" ") if word]
                             words = [x.strip() for x in words if x.strip()]
@@ -207,7 +208,7 @@ def main():
                                 pass
                             if race.is_cancel is None:
                                 race.is_cancel = 0
-    SESSION.commit()
+    Session.commit()
 
     # period stats
     period_stats_list = []
@@ -221,15 +222,13 @@ def main():
                     racer_number = line[0:4]
                     year = line[164:168]
                     period = line[168:169]
-                    period_stat = (
-                        SESSION.query(PeriodStat)
-                        .filter(
+                    period_stat = Session.scalars(
+                        select(PeriodStat).where(
                             PeriodStat.racer_number == racer_number,
                             PeriodStat.year == year,
                             PeriodStat.period == period,
                         )
-                        .one_or_none()
-                    )
+                    ).one_or_none()
                     if period_stat is not None:
                         period_stat.sex = int(line[38:39])
                         period_stat.course1_entry_count = int(line[72:75])
@@ -325,8 +324,8 @@ def main():
                                 course6_3rd_count=int(line[364:367]),
                             )
                         )
-    SESSION.add_all(period_stats_list)
-    SESSION.commit()
+    Session.add_all(period_stats_list)
+    Session.commit()
 
 
 if __name__ == "__main__":

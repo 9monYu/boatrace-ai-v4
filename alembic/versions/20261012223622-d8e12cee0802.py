@@ -1,8 +1,8 @@
 """
 
-Revision ID: 39f381086040
+Revision ID: d8e12cee0802
 Revises: 
-Create Date: 2026-08-31 14:54:56.452830
+Create Date: 2026-10-12 22:36:22.134130
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '39f381086040'
+revision: str = 'd8e12cee0802'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -108,39 +108,21 @@ def upgrade() -> None:
     sa.Column('venue', sa.INTEGER(), nullable=False),
     sa.Column('year', sa.INTEGER(), nullable=False),
     sa.Column('normal_entry_race_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course1_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course1_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course1_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course1_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course1_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course1_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('normal_entry_course2_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course2_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course2_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course2_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course2_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course2_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('normal_entry_course3_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course3_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course3_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course3_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course3_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course3_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('normal_entry_course4_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course4_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course4_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course4_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course4_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course4_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('normal_entry_course5_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course5_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course5_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course5_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course5_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course5_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('normal_entry_course6_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course6_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('normal_entry_course6_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('normal_entry_course6_1st_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course6_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('normal_entry_course6_3rd_rate', sa.REAL(), nullable=True),
@@ -188,24 +170,30 @@ def upgrade() -> None:
     sa.Column('before_info_display_time', sa.REAL(), nullable=True),
     sa.Column('before_info_display_time_z_score', sa.REAL(), nullable=True),
     sa.Column('before_info_tilt', sa.REAL(), nullable=True),
-    sa.Column('last5_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('last5_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('last5_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('last5_1st_rate', sa.REAL(), nullable=True),
     sa.Column('last5_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('last5_3rd_rate', sa.REAL(), nullable=True),
     sa.Column('last5_average_rank', sa.REAL(), nullable=True),
     sa.Column('last5_average_start_timing', sa.REAL(), nullable=True),
     sa.Column('last5_start_timing_std', sa.REAL(), nullable=True),
-    sa.Column('last10_1st_count', sa.INTEGER(), nullable=True),
-    sa.Column('last10_2nd_count', sa.INTEGER(), nullable=True),
-    sa.Column('last10_3rd_count', sa.INTEGER(), nullable=True),
     sa.Column('last10_1st_rate', sa.REAL(), nullable=True),
     sa.Column('last10_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('last10_3rd_rate', sa.REAL(), nullable=True),
     sa.Column('last10_average_rank', sa.REAL(), nullable=True),
     sa.Column('last10_average_start_timing', sa.REAL(), nullable=True),
     sa.Column('last10_start_timing_std', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_1st_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_2nd_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_3rd_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_average_rank', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_average_start_timing', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last5_start_timing_std', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_1st_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_2nd_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_3rd_rate', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_average_rank', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_average_start_timing', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_start_timing_std', sa.REAL(), nullable=True),
     sa.Column('course', sa.INTEGER(), nullable=True),
     sa.Column('start_timing', sa.REAL(), nullable=True),
     sa.Column('result', sa.INTEGER(), nullable=True),

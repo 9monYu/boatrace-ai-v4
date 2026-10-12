@@ -5,9 +5,11 @@ import statistics
 
 import lightgbm
 import pandas
+from sqlalchemy import select
 from tqdm import tqdm
 
-from constants import SEED_COUNT, SESSION, TRIFECTA_LIST
+from constants import SEED_COUNT, TRIFECTA_LIST
+from database import Session
 from models import Ticket
 
 
@@ -27,15 +29,13 @@ def main():
                 deltas_list.append(deltas)
 
             for race_index, race_id in tqdm(enumerate(eval_df.index), total=len(eval_df), desc=f"{year} {'score':<7}"):
-                ticket_list = (
-                    SESSION.query(Ticket)
-                    .filter(
+                ticket_list = Session.scalars(
+                    select(Ticket).where(
                         Ticket.race_id == race_id,
-                        Ticket.deadline_odds.isnot(None),
-                        Ticket.deadline_odds_market_share.isnot(None),
+                        Ticket.deadline_odds.is_not(None),
+                        Ticket.deadline_odds_market_share.is_not(None),
                     )
-                    .all()
-                )
+                ).all()
 
                 ticket_by_trifecta = {(ticket.first, ticket.second, ticket.third): ticket for ticket in ticket_list}
 
@@ -53,7 +53,7 @@ def main():
                     ) / sum_exp_score
                     ticket.deadline_odds_expected_value = ticket.deadline_odds_probability * ticket.deadline_odds
 
-            SESSION.commit()
+            Session.commit()
 
 
 if __name__ == "__main__":

@@ -2,9 +2,11 @@ import csv
 import os
 
 import numpy
+from sqlalchemy import select
 from tqdm import tqdm
 
-from constants import SESSION, TRIFECTA_LIST
+from constants import TRIFECTA_LIST
+from database import Session
 from models import Race, Racer, Ticket
 
 
@@ -16,7 +18,7 @@ def main():
             with open(os.path.join(directory_path, file), "r", encoding="UTF-8") as f:
                 for row in csv.reader(f):
                     race_id = int(row[0])
-                    race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                    race = Session.get(Race, race_id)
                     if race is not None:
                         race.grade = row[1] if row[1] != "" else None
                         race.is_last_day = row[2] if row[2] != "" else None
@@ -34,7 +36,7 @@ def main():
                         race.water_temperature = float(row[14]) if row[14] != "" else None
                         race.wave_height = int(row[15]) if row[15] != "" else None
                         race.winning_style = row[16] if row[16] != "" else None
-            SESSION.commit()
+            Session.commit()
 
     # racer
     directory_path = os.path.join(os.getcwd(), "scraping_data", "racer")
@@ -48,11 +50,7 @@ def main():
                     if race_id not in race_id_list:
                         race_id_list.append(race_id)
                     boat_number = int(row[1])
-                    racer = (
-                        SESSION.query(Racer)
-                        .filter(Racer.race_id == race_id, Racer.boat_number == boat_number)
-                        .one_or_none()
-                    )
+                    racer = Session.get(Racer, (race_id, boat_number))
                     if racer is not None:
                         racer.racer_number = int(row[2])
                         racer.racer_class = row[3]
@@ -121,11 +119,11 @@ def main():
                                 race_time=float(row[30]) if row[30] != "" else None,
                             )
                         )
-            SESSION.add_all(racer_list)
-            SESSION.commit()
+            Session.add_all(racer_list)
+            Session.commit()
 
             for race_id in race_id_list:
-                racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).all()
+                racer_list = Session.scalars(select(Racer).where(Racer.race_id == race_id)).all()
 
                 # average_start_timing
                 average_start_timing_list = [
@@ -359,7 +357,7 @@ def main():
                             else 0.0
                         )
 
-            SESSION.commit()
+            Session.commit()
 
     # deadline odds
     directory_path = os.path.join(os.getcwd(), "scraping_data", "deadline_odds")
@@ -369,12 +367,12 @@ def main():
             with open(os.path.join(directory_path, file), "r", encoding="UTF-8") as f:
                 for row in csv.reader(f):
                     race_id = int(row.pop(0))
-                    race = SESSION.query(Race).filter(Race.id == race_id).one()
+                    race = Session.get(Race, race_id)
                     deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
                     sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
                     tickets = {
                         (ticket.first, ticket.second, ticket.third): ticket
-                        for ticket in SESSION.query(Ticket).filter(Ticket.race_id == race_id).all()
+                        for ticket in Session.scalars(select(Ticket).where(Ticket.race_id == race_id)).all()
                     }
                     for index in range(120):
                         is_win = (
@@ -407,8 +405,8 @@ def main():
                                     deadline_odds_market_share=deadline_odds_market_share,
                                 )
                             )
-            SESSION.add_all(ticket_list)
-            SESSION.commit()
+            Session.add_all(ticket_list)
+            Session.commit()
 
 
 if __name__ == "__main__":

@@ -1,11 +1,3 @@
-import sqlite3
-
-from sqlalchemy import create_engine
-from sqlalchemy.event import listens_for
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import decl_api, scoped_session, scoping, sessionmaker
-from sqlalchemy.pool import Pool
-
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
 
 REQUEST_HEADERS = {"User-Agent": USER_AGENT}
@@ -615,17 +607,3 @@ CATEGORICAL_FEATURE_LIST = [
     "boat6_racer_class",
     "boat6_sex",
 ]
-
-
-ENGINE = create_engine(url="sqlite:///database/database.db", echo=False)
-SESSION: scoping.scoped_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
-
-BASE: decl_api.DeclarativeMeta = declarative_base()
-BASE.query = SESSION.query_property()
-
-
-@listens_for(Pool, "connect")
-def on_connect(dbapi_con: sqlite3.Connection, _):
-    cursor: sqlite3.Cursor = dbapi_con.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-    cursor.close()

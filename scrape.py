@@ -6,8 +6,10 @@ from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
+from sqlalchemy import select
 
-from constants import REQUEST_HEADERS, SESSION
+from constants import REQUEST_HEADERS
+from database import Session
 from models import Race
 
 
@@ -23,16 +25,15 @@ def main():
     except ValueError:
         return
 
-    race_list = (
-        SESSION.query(Race)
-        .filter(
+    race_list = Session.scalars(
+        select(Race)
+        .where(
             Race.is_cancel == 0,
             Race.date >= args.start_date,
             Race.date <= args.end_date,
         )
         .order_by(Race.id.asc())
-        .all()
-    )
+    ).all()
     for race_index, race in enumerate(race_list):
         if race_index == 0 or race.date != race_list[race_index - 1].date:
             print(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {race.date}")

@@ -19,6 +19,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from constants import (
     CSV_COLUMN_LIST,
@@ -26,12 +28,12 @@ from constants import (
     RACER_CLASS_LIST,
     REQUEST_HEADERS,
     SEED_COUNT,
-    SESSION,
     TRIFECTA_LIST,
     USER_AGENT,
     WEATHER_LIST,
     WIND_DIRECTION_ANGLES,
 )
+from database import Session
 from models import PeriodStat, Race, Racer, Ticket, VenueStat
 
 
@@ -124,7 +126,7 @@ def import_official_data(target_date: int):
                 hour = int(race_match.group(2))
                 minute = int(race_match.group(3))
                 race_id = int(f"{target_date}{venue}{str(race_number).zfill(2)}")
-                race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                race = Session.get(Race, race_id)
                 if race is not None:
                     race.date = target_date
                     race.period_progress_rate = period_progress_rate
@@ -133,7 +135,7 @@ def import_official_data(target_date: int):
                     race.deadline = f"{str(hour).zfill(2)}:{str(minute).zfill(2)}"
                     race.day_number = day_number
                 else:
-                    SESSION.add(
+                    Session.add(
                         Race(
                             id=race_id,
                             date=target_date,
@@ -144,7 +146,7 @@ def import_official_data(target_date: int):
                             day_number=day_number,
                         )
                     )
-    SESSION.commit()
+    Session.commit()
 
     # result
     with open(os.path.join(os.getcwd(), "temp", f"K{target_date % 1000000}.TXT"), "r", encoding="CP932") as f:
@@ -160,7 +162,7 @@ def import_official_data(target_date: int):
             if result_match is not None:
                 race_number = result_match.group(2)
                 race_id = int(f"{target_date}{venue}{str(race_number).zfill(2)}")
-                race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+                race = Session.get(Race, race_id)
                 if race is not None:
                     words = [word for word in line.split(" ") if word]
                     words = [x.strip() for x in words if x.strip()]
@@ -274,19 +276,18 @@ def import_official_data(target_date: int):
                         pass
                     if race.is_cancel is None:
                         race.is_cancel = 0
-    SESSION.commit()
+    Session.commit()
 
 
 def scrape(target_date: int):
-    race_list = (
-        SESSION.query(Race)
-        .filter(
+    race_list = Session.scalars(
+        select(Race)
+        .where(
             Race.is_cancel == 0,
             Race.date == target_date,
         )
         .order_by(Race.id.asc())
-        .all()
-    )
+    ).all()
     for race in race_list:
         racer_list = [
             [],
@@ -958,7 +959,7 @@ def import_scraping_data(target_date: int):
     with open(os.path.join(os.getcwd(), "temp", f"race_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row[0])
-            race = SESSION.query(Race).filter(Race.id == race_id).one_or_none()
+            race = Session.get(Race, race_id)
             if race is not None:
                 race.grade = row[1] if row[1] != "" else None
                 race.is_last_day = row[2] if row[2] != "" else None
@@ -976,7 +977,7 @@ def import_scraping_data(target_date: int):
                 race.water_temperature = float(row[14]) if row[14] != "" else None
                 race.wave_height = int(row[15]) if row[15] != "" else None
                 race.winning_style = row[16] if row[16] != "" else None
-    SESSION.commit()
+    Session.commit()
 
     # racer
     race_id_list = []
@@ -987,9 +988,9 @@ def import_scraping_data(target_date: int):
             if race_id not in race_id_list:
                 race_id_list.append(race_id)
             boat_number = int(row[1])
-            racer = (
-                SESSION.query(Racer).filter(Racer.race_id == race_id, Racer.boat_number == boat_number).one_or_none()
-            )
+            racer = Session.scalars(
+                select(Racer).where(Racer.race_id == race_id, Racer.boat_number == boat_number)
+            ).one_or_none()
             if racer is not None:
                 racer.racer_number = int(row[2])
                 racer.racer_class = row[3]
@@ -1058,11 +1059,11 @@ def import_scraping_data(target_date: int):
                         race_time=float(row[30]) if row[30] != "" else None,
                     )
                 )
-    SESSION.add_all(racer_list)
-    SESSION.commit()
+    Session.add_all(racer_list)
+    Session.commit()
 
     for race_id in race_id_list:
-        racer_list = SESSION.query(Racer).filter(Racer.race_id == race_id).all()
+        racer_list = Session.scalars(select(Racer).where(Racer.race_id == race_id)).all()
 
         # average_start_timing
         average_start_timing_list = [
@@ -1277,14 +1278,14 @@ def import_scraping_data(target_date: int):
                     else 0.0
                 )
 
-    SESSION.commit()
+    Session.commit()
 
     # deadline odds
     ticket_list = []
     with open(os.path.join(os.getcwd(), "temp", f"deadline_odds_{target_date}.csv"), "r", encoding="UTF-8") as f:
         for row in csv.reader(f):
             race_id = int(row.pop(0))
-            race = SESSION.query(Race).filter(Race.id == race_id).one()
+            race = Session.get(Race, race_id)
             deadline_odds_list = sorted([float(x) for x in row if x and x != "0.0"])
             sum_deadline_odds_inverse = sum(1.0 / deadline_odds for deadline_odds in deadline_odds_list)
             for index in range(120):
@@ -1299,16 +1300,14 @@ def import_scraping_data(target_date: int):
                 deadline_odds_market_share = (
                     (1.0 / deadline_odds) / sum_deadline_odds_inverse if deadline_odds is not None else None
                 )
-                ticket = (
-                    SESSION.query(Ticket)
-                    .filter(
+                ticket = Session.scalars(
+                    select(Ticket).where(
                         Ticket.race_id == race_id,
                         Ticket.first == TRIFECTA_LIST[index][0],
                         Ticket.second == TRIFECTA_LIST[index][1],
                         Ticket.third == TRIFECTA_LIST[index][2],
                     )
-                    .one_or_none()
-                )
+                ).one_or_none()
                 if ticket is not None:
                     ticket.is_win = is_win
                     ticket.deadline_odds = deadline_odds
@@ -1325,23 +1324,22 @@ def import_scraping_data(target_date: int):
                             deadline_odds_market_share=deadline_odds_market_share,
                         )
                     )
-    SESSION.add_all(ticket_list)
-    SESSION.commit()
+    Session.add_all(ticket_list)
+    Session.commit()
 
 
 def calculate_stats(target_date: int):
-    race_list = (
-        SESSION.query(Race)
-        .filter(
+    race_list = Session.scalars(
+        select(Race)
+        .options(selectinload(Race.racers))
+        .where(
             Race.is_cancel == 0,
             Race.date == target_date,
         )
         .order_by(Race.id.asc())
-        .all()
-    )
+    ).all()
     for race in race_list:
-        racer_list = SESSION.query(Racer).filter(Racer.race_id == race.id).order_by(Racer.boat_number.asc()).all()
-        for racer in racer_list:
+        for racer in race.racers:
             last5_1st_count = 0
             last5_2nd_count = 0
             last5_3rd_count = 0
@@ -1352,18 +1350,17 @@ def calculate_stats(target_date: int):
             last10_3rd_count = 0
             last10_result_list = []
             last10_start_timing_list = []
-            last10_racer_list = (
-                SESSION.query(Racer)
-                .filter(
+            last10_racer_list = Session.scalars(
+                select(Racer)
+                .where(
                     Racer.race_id < race.id,
                     Racer.racer_number == racer.racer_number,
-                    Racer.start_timing.isnot(None),
-                    Racer.result.isnot(None),
+                    Racer.start_timing.is_not(None),
+                    Racer.result.is_not(None),
                 )
                 .order_by(Racer.race_id.desc())
                 .limit(10)
-                .all()
-            )
+            ).all()
             for index, last10_racer in enumerate(last10_racer_list):
                 if last10_racer.result == 1:
                     if index < 5:
@@ -1386,9 +1383,6 @@ def calculate_stats(target_date: int):
                     last5_start_timing_list.append(last10_racer.start_timing)
                 last10_start_timing_list.append(last10_racer.start_timing)
             if len(last10_racer_list) >= 5:
-                racer.last5_1st_count = last5_1st_count
-                racer.last5_2nd_count = last5_2nd_count
-                racer.last5_3rd_count = last5_3rd_count
                 racer.last5_1st_rate = round((last5_1st_count / 5) * 100, 2)
                 racer.last5_2nd_rate = round((last5_2nd_count / 5) * 100, 2)
                 racer.last5_3rd_rate = round((last5_3rd_count / 5) * 100, 2)
@@ -1396,9 +1390,6 @@ def calculate_stats(target_date: int):
                 racer.last5_average_start_timing = numpy.mean(last5_start_timing_list)
                 racer.last5_start_timing_std = numpy.std(last5_start_timing_list)
             else:
-                racer.last5_1st_count = None
-                racer.last5_2nd_count = None
-                racer.last5_3rd_count = None
                 racer.last5_1st_rate = None
                 racer.last5_2nd_rate = None
                 racer.last5_3rd_rate = None
@@ -1406,9 +1397,6 @@ def calculate_stats(target_date: int):
                 racer.last5_average_start_timing = None
                 racer.last5_start_timing_std = None
             if len(last10_racer_list) == 10:
-                racer.last10_1st_count = last10_1st_count
-                racer.last10_2nd_count = last10_2nd_count
-                racer.last10_3rd_count = last10_3rd_count
                 racer.last10_1st_rate = round((last10_1st_count / 10) * 100, 2)
                 racer.last10_2nd_rate = round((last10_2nd_count / 10) * 100, 2)
                 racer.last10_3rd_rate = round((last10_3rd_count / 10) * 100, 2)
@@ -1416,16 +1404,13 @@ def calculate_stats(target_date: int):
                 racer.last10_average_start_timing = numpy.mean(last10_start_timing_list)
                 racer.last10_start_timing_std = numpy.std(last10_start_timing_list)
             else:
-                racer.last10_1st_count = None
-                racer.last10_2nd_count = None
-                racer.last10_3rd_count = None
                 racer.last10_1st_rate = None
                 racer.last10_2nd_rate = None
                 racer.last10_3rd_rate = None
                 racer.last10_average_rank = None
                 racer.last10_average_start_timing = None
                 racer.last10_start_timing_std = None
-    SESSION.commit()
+    Session.commit()
 
 
 def predict(target_date: int):
@@ -1434,65 +1419,63 @@ def predict(target_date: int):
     ) as f:
         writer = csv.writer(f)
         writer.writerow(CSV_COLUMN_LIST[:-1])
-        race_list = (
-            SESSION.query(Race)
-            .filter(
+        race_list = Session.scalars(
+            select(Race)
+            .where(
                 Race.is_cancel == 0,
                 Race.date == target_date,
-                Race.grade.isnot(None),
-                Race.venue.isnot(None),
-                Race.day_number.isnot(None),
-                Race.is_last_day.isnot(None),
-                Race.race_number.isnot(None),
-                Race.has_stabilizer.isnot(None),
-                Race.before_info_temperature.isnot(None),
-                Race.before_info_weather.isnot(None),
-                Race.before_info_wind_speed.isnot(None),
-                Race.before_info_wind_direction.isnot(None),
-                Race.before_info_water_temperature.isnot(None),
-                Race.before_info_wave_height.isnot(None),
+                Race.grade.is_not(None),
+                Race.venue.is_not(None),
+                Race.day_number.is_not(None),
+                Race.is_last_day.is_not(None),
+                Race.race_number.is_not(None),
+                Race.has_stabilizer.is_not(None),
+                Race.before_info_temperature.is_not(None),
+                Race.before_info_weather.is_not(None),
+                Race.before_info_wind_speed.is_not(None),
+                Race.before_info_wind_direction.is_not(None),
+                Race.before_info_water_temperature.is_not(None),
+                Race.before_info_wave_height.is_not(None),
             )
             .order_by(Race.id.asc())
-            .all()
-        )
+        ).all()
         for race in race_list:
-            racer_list = (
-                SESSION.query(Racer)
-                .filter(
+            racer_list = Session.scalars(
+                select(Racer)
+                .where(
                     Racer.race_id == race.id,
-                    Racer.racer_class.isnot(None),
-                    Racer.branch.isnot(None),
-                    Racer.age.isnot(None),
-                    Racer.flying.isnot(None),
-                    Racer.late.isnot(None),
-                    Racer.average_start_timing.isnot(None),
-                    Racer.all_venue_win_rate.isnot(None),
-                    Racer.all_venue_top2_rate.isnot(None),
-                    Racer.this_venue_win_rate.isnot(None),
-                    Racer.this_venue_top2_rate.isnot(None),
-                    Racer.motor_top2_rate.isnot(None),
-                    Racer.before_info_course.isnot(None),
-                    Racer.before_info_start_timing_abs.isnot(None),
-                    Racer.before_info_weight.isnot(None),
-                    Racer.before_info_adjusted_weight.isnot(None),
-                    Racer.before_info_display_time.isnot(None),
-                    Racer.before_info_tilt.isnot(None),
-                    Racer.last5_1st_rate.isnot(None),
-                    Racer.last5_2nd_rate.isnot(None),
-                    Racer.last5_3rd_rate.isnot(None),
-                    Racer.last5_average_rank.isnot(None),
-                    Racer.last5_average_start_timing.isnot(None),
-                    Racer.last5_start_timing_std.isnot(None),
-                    Racer.last10_1st_rate.isnot(None),
-                    Racer.last10_2nd_rate.isnot(None),
-                    Racer.last10_3rd_rate.isnot(None),
-                    Racer.last10_average_rank.isnot(None),
-                    Racer.last10_average_start_timing.isnot(None),
-                    Racer.last10_start_timing_std.isnot(None),
+                    Racer.racer_class.is_not(None),
+                    Racer.branch.is_not(None),
+                    Racer.age.is_not(None),
+                    Racer.flying.is_not(None),
+                    Racer.late.is_not(None),
+                    Racer.average_start_timing.is_not(None),
+                    Racer.all_venue_win_rate.is_not(None),
+                    Racer.all_venue_top2_rate.is_not(None),
+                    Racer.this_venue_win_rate.is_not(None),
+                    Racer.this_venue_top2_rate.is_not(None),
+                    Racer.motor_top2_rate.is_not(None),
+                    Racer.before_info_course.is_not(None),
+                    Racer.before_info_start_timing_abs.is_not(None),
+                    Racer.before_info_weight.is_not(None),
+                    Racer.before_info_adjusted_weight.is_not(None),
+                    Racer.before_info_display_time.is_not(None),
+                    Racer.before_info_tilt.is_not(None),
+                    Racer.last5_1st_rate.is_not(None),
+                    Racer.last5_2nd_rate.is_not(None),
+                    Racer.last5_3rd_rate.is_not(None),
+                    Racer.last5_average_rank.is_not(None),
+                    Racer.last5_average_start_timing.is_not(None),
+                    Racer.last5_start_timing_std.is_not(None),
+                    Racer.last10_1st_rate.is_not(None),
+                    Racer.last10_2nd_rate.is_not(None),
+                    Racer.last10_3rd_rate.is_not(None),
+                    Racer.last10_average_rank.is_not(None),
+                    Racer.last10_average_start_timing.is_not(None),
+                    Racer.last10_start_timing_std.is_not(None),
                 )
                 .order_by(Racer.boat_number.asc())
-                .all()
-            )
+            ).all()
             if (
                 len(racer_list) == 6
                 and racer_list[0].before_info_course == 1
@@ -1501,112 +1484,102 @@ def predict(target_date: int):
                 and racer_list[3].before_info_course == 4
                 and racer_list[4].before_info_course == 5
                 and racer_list[5].before_info_course == 6
-                and SESSION.query(Ticket)
-                .filter(
-                    Ticket.race_id == race.id,
-                    Ticket.deadline_odds.isnot(None),
-                    Ticket.deadline_odds_market_share.isnot(None),
+                and Session.scalar(
+                    select(func.count())
+                    .select_from(Ticket)
+                    .where(
+                        Ticket.race_id == race.id,
+                        Ticket.deadline_odds.is_not(None),
+                        Ticket.deadline_odds_market_share.is_not(None),
+                    )
                 )
-                .count()
                 == 120
             ):
                 period = 1 if (race.date // 100) % 100 < 7 else 2
-                boat1_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                boat1_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[0].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course1_entry_count > 0,
-                        PeriodStat.course1_average_start_timing.isnot(None),
-                        PeriodStat.course1_average_start_rank.isnot(None),
-                        PeriodStat.course1_1st_count.isnot(None),
-                        PeriodStat.course1_2nd_count.isnot(None),
-                        PeriodStat.course1_3rd_count.isnot(None),
+                        PeriodStat.course1_average_start_timing.is_not(None),
+                        PeriodStat.course1_average_start_rank.is_not(None),
+                        PeriodStat.course1_1st_count.is_not(None),
+                        PeriodStat.course1_2nd_count.is_not(None),
+                        PeriodStat.course1_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
-                boat2_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                ).one_or_none()
+                boat2_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[1].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course2_entry_count > 0,
-                        PeriodStat.course2_average_start_timing.isnot(None),
-                        PeriodStat.course2_average_start_rank.isnot(None),
-                        PeriodStat.course2_1st_count.isnot(None),
-                        PeriodStat.course2_2nd_count.isnot(None),
-                        PeriodStat.course2_3rd_count.isnot(None),
+                        PeriodStat.course2_average_start_timing.is_not(None),
+                        PeriodStat.course2_average_start_rank.is_not(None),
+                        PeriodStat.course2_1st_count.is_not(None),
+                        PeriodStat.course2_2nd_count.is_not(None),
+                        PeriodStat.course2_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
-                boat3_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                ).one_or_none()
+                boat3_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[2].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course3_entry_count > 0,
-                        PeriodStat.course3_average_start_timing.isnot(None),
-                        PeriodStat.course3_average_start_rank.isnot(None),
-                        PeriodStat.course3_1st_count.isnot(None),
-                        PeriodStat.course3_2nd_count.isnot(None),
-                        PeriodStat.course3_3rd_count.isnot(None),
+                        PeriodStat.course3_average_start_timing.is_not(None),
+                        PeriodStat.course3_average_start_rank.is_not(None),
+                        PeriodStat.course3_1st_count.is_not(None),
+                        PeriodStat.course3_2nd_count.is_not(None),
+                        PeriodStat.course3_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
-                boat4_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                ).one_or_none()
+                boat4_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[3].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course4_entry_count > 0,
-                        PeriodStat.course4_average_start_timing.isnot(None),
-                        PeriodStat.course4_average_start_rank.isnot(None),
-                        PeriodStat.course4_1st_count.isnot(None),
-                        PeriodStat.course4_2nd_count.isnot(None),
-                        PeriodStat.course4_3rd_count.isnot(None),
+                        PeriodStat.course4_average_start_timing.is_not(None),
+                        PeriodStat.course4_average_start_rank.is_not(None),
+                        PeriodStat.course4_1st_count.is_not(None),
+                        PeriodStat.course4_2nd_count.is_not(None),
+                        PeriodStat.course4_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
-                boat5_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                ).one_or_none()
+                boat5_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[4].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course5_entry_count > 0,
-                        PeriodStat.course5_average_start_timing.isnot(None),
-                        PeriodStat.course5_average_start_rank.isnot(None),
-                        PeriodStat.course5_1st_count.isnot(None),
-                        PeriodStat.course5_2nd_count.isnot(None),
-                        PeriodStat.course5_3rd_count.isnot(None),
+                        PeriodStat.course5_average_start_timing.is_not(None),
+                        PeriodStat.course5_average_start_rank.is_not(None),
+                        PeriodStat.course5_1st_count.is_not(None),
+                        PeriodStat.course5_2nd_count.is_not(None),
+                        PeriodStat.course5_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
-                boat6_period_stat = (
-                    SESSION.query(PeriodStat)
-                    .filter(
+                ).one_or_none()
+                boat6_period_stat = Session.scalars(
+                    select(PeriodStat).where(
                         PeriodStat.racer_number == racer_list[5].racer_number,
                         PeriodStat.year == race.date // 10000,
                         PeriodStat.period == period,
-                        PeriodStat.sex.isnot(None),
+                        PeriodStat.sex.is_not(None),
                         PeriodStat.course6_entry_count > 0,
-                        PeriodStat.course6_average_start_timing.isnot(None),
-                        PeriodStat.course6_average_start_rank.isnot(None),
-                        PeriodStat.course6_1st_count.isnot(None),
-                        PeriodStat.course6_2nd_count.isnot(None),
-                        PeriodStat.course6_3rd_count.isnot(None),
+                        PeriodStat.course6_average_start_timing.is_not(None),
+                        PeriodStat.course6_average_start_rank.is_not(None),
+                        PeriodStat.course6_1st_count.is_not(None),
+                        PeriodStat.course6_2nd_count.is_not(None),
+                        PeriodStat.course6_3rd_count.is_not(None),
                     )
-                    .one_or_none()
-                )
+                ).one_or_none()
                 if (
                     boat1_period_stat is not None
                     and boat2_period_stat is not None
@@ -1690,11 +1663,11 @@ def predict(target_date: int):
                     row.append(datetime.strptime(str(race.date), "%Y%m%d").date().weekday())
                     row.append(race.period_progress_rate)
                     row.append(race.venue)
-                    venue_stat = (
-                        SESSION.query(VenueStat)
-                        .filter(VenueStat.venue == race.venue, VenueStat.year == (race.date // 10000) - 1)
-                        .one()
-                    )
+                    venue_stat = Session.scalars(
+                        select(VenueStat).where(
+                            VenueStat.venue == race.venue, VenueStat.year == (race.date // 10000) - 1
+                        )
+                    ).one()
                     row.append(venue_stat.normal_entry_course1_1st_rate)
                     row.append(venue_stat.normal_entry_course1_2nd_rate)
                     row.append(venue_stat.normal_entry_course1_3rd_rate)
@@ -2078,15 +2051,13 @@ def predict(target_date: int):
             deltas_list.append(deltas)
 
         for race_index, race_id in enumerate(predict_df.index):
-            ticket_list = (
-                SESSION.query(Ticket)
-                .filter(
+            ticket_list = Session.scalars(
+                select(Ticket).where(
                     Ticket.race_id == race_id,
-                    Ticket.deadline_odds.isnot(None),
-                    Ticket.deadline_odds_market_share.isnot(None),
+                    Ticket.deadline_odds.is_not(None),
+                    Ticket.deadline_odds_market_share.is_not(None),
                 )
-                .all()
-            )
+            ).all()
 
             ticket_by_trifecta = {(ticket.first, ticket.second, ticket.third): ticket for ticket in ticket_list}
 
@@ -2104,7 +2075,7 @@ def predict(target_date: int):
                 ) / sum_exp_score
                 ticket.deadline_odds_expected_value = ticket.deadline_odds_probability * ticket.deadline_odds
 
-        SESSION.commit()
+        Session.commit()
 
 
 def main():
