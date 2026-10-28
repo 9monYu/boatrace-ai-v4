@@ -60,12 +60,12 @@ def main():
         second = [1, 2, 3, 4, 5, 6] if second == "9" else [int(x) for x in second]
         third = [1, 2, 3, 4, 5, 6] if third == "9" else [int(x) for x in third]
         for odds in [
+            (1.0, 100.0),
+            (100.0, 400.0),
             (1.0, 50.0),
             (50.0, 100.0),
             (100.0, 200.0),
             (200.0, 400.0),
-            # (1.0, 100.0),
-            # (100.0, 400.0),
         ]:
             with open(
                 os.path.join(os.getcwd(), "temp", f"analysis_{trifecta}_{int(odds[0])}-{int(odds[1])}.tsv"),

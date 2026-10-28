@@ -1340,76 +1340,108 @@ def calculate_stats(target_date: int):
     ).all()
     for race in race_list:
         for racer in race.racers:
-            last5_1st_count = 0
-            last5_2nd_count = 0
-            last5_3rd_count = 0
-            last5_result_list = []
-            last5_start_timing_list = []
+            last10_start_timing_list = []
             last10_1st_count = 0
             last10_2nd_count = 0
             last10_3rd_count = 0
             last10_result_list = []
-            last10_start_timing_list = []
             last10_racer_list = Session.scalars(
                 select(Racer)
                 .where(
                     Racer.race_id < race.id,
                     Racer.racer_number == racer.racer_number,
-                    Racer.start_timing.is_not(None),
-                    Racer.result.is_not(None),
                 )
                 .order_by(Racer.race_id.desc())
                 .limit(10)
             ).all()
-            for index, last10_racer in enumerate(last10_racer_list):
-                if last10_racer.result == 1:
-                    if index < 5:
-                        last5_1st_count += 1
-                    last10_1st_count += 1
-                elif last10_racer.result == 2:
-                    if index < 5:
-                        last5_2nd_count += 1
-                    last10_2nd_count += 1
-                elif last10_racer.result == 3:
-                    if index < 5:
-                        last5_3rd_count += 1
-                    last10_3rd_count += 1
-                else:
-                    pass
-                if index < 5:
-                    last5_result_list.append(last10_racer.result)
-                last10_result_list.append(last10_racer.result)
-                if index < 5:
-                    last5_start_timing_list.append(last10_racer.start_timing)
-                last10_start_timing_list.append(last10_racer.start_timing)
-            if len(last10_racer_list) >= 5:
-                racer.last5_1st_rate = round((last5_1st_count / 5) * 100, 2)
-                racer.last5_2nd_rate = round((last5_2nd_count / 5) * 100, 2)
-                racer.last5_3rd_rate = round((last5_3rd_count / 5) * 100, 2)
-                racer.last5_average_rank = numpy.mean(last5_result_list)
-                racer.last5_average_start_timing = numpy.mean(last5_start_timing_list)
-                racer.last5_start_timing_std = numpy.std(last5_start_timing_list)
-            else:
-                racer.last5_1st_rate = None
-                racer.last5_2nd_rate = None
-                racer.last5_3rd_rate = None
-                racer.last5_average_rank = None
-                racer.last5_average_start_timing = None
-                racer.last5_start_timing_std = None
             if len(last10_racer_list) == 10:
+                for last10_racer in last10_racer_list:
+                    if last10_racer.start_timing is not None:
+                        last10_start_timing_list.append(last10_racer.start_timing)
+                    if last10_racer.result == 1:
+                        last10_1st_count += 1
+                    elif last10_racer.result == 2:
+                        last10_2nd_count += 1
+                    elif last10_racer.result == 3:
+                        last10_3rd_count += 1
+                    else:
+                        pass
+                    if last10_racer.result is not None:
+                        last10_result_list.append(last10_racer.result)
+                    else:
+                        last10_result_list.append(6)
+                if last10_start_timing_list:
+                    racer.last10_average_start_timing = numpy.mean(last10_start_timing_list)
+                    racer.last10_start_timing_std = numpy.std(last10_start_timing_list)
+                else:
+                    racer.last10_average_start_timing = None
+                    racer.last10_start_timing_std = None
                 racer.last10_1st_rate = round((last10_1st_count / 10) * 100, 2)
                 racer.last10_2nd_rate = round((last10_2nd_count / 10) * 100, 2)
                 racer.last10_3rd_rate = round((last10_3rd_count / 10) * 100, 2)
                 racer.last10_average_rank = numpy.mean(last10_result_list)
-                racer.last10_average_start_timing = numpy.mean(last10_start_timing_list)
-                racer.last10_start_timing_std = numpy.std(last10_start_timing_list)
             else:
+                racer.last10_average_start_timing = None
+                racer.last10_start_timing_std = None
                 racer.last10_1st_rate = None
                 racer.last10_2nd_rate = None
                 racer.last10_3rd_rate = None
                 racer.last10_average_rank = None
-                racer.last10_average_start_timing = None
-                racer.last10_start_timing_std = None
+
+            boat_number_course_last10_start_timing_list = []
+            boat_number_course_last10_1st_count = 0
+            boat_number_course_last10_2nd_count = 0
+            boat_number_course_last10_3rd_count = 0
+            boat_number_course_last10_result_list = []
+            boat_number_course_last10_racer_list = Session.scalars(
+                select(Racer)
+                .where(
+                    Racer.race_id < race.id,
+                    Racer.racer_number == racer.racer_number,
+                    Racer.boat_number == racer.boat_number,
+                    Racer.course == racer.boat_number,
+                )
+                .order_by(Racer.race_id.desc())
+                .limit(10)
+            ).all()
+            if len(boat_number_course_last10_racer_list) == 10:
+                for boat_number_course_last10_racer in boat_number_course_last10_racer_list:
+                    if boat_number_course_last10_racer.start_timing is not None:
+                        boat_number_course_last10_start_timing_list.append(boat_number_course_last10_racer.start_timing)
+                    if boat_number_course_last10_racer.result == 1:
+                        boat_number_course_last10_1st_count += 1
+                    elif boat_number_course_last10_racer.result == 2:
+                        boat_number_course_last10_2nd_count += 1
+                    elif boat_number_course_last10_racer.result == 3:
+                        boat_number_course_last10_3rd_count += 1
+                    else:
+                        pass
+                    if boat_number_course_last10_racer.result is not None:
+                        boat_number_course_last10_result_list.append(boat_number_course_last10_racer.result)
+                    else:
+                        boat_number_course_last10_result_list.append(6)
+                if boat_number_course_last10_start_timing_list:
+                    racer.boat_number_course_last10_average_start_timing = numpy.mean(
+                        boat_number_course_last10_start_timing_list
+                    )
+                    racer.boat_number_course_last10_start_timing_std = numpy.std(
+                        boat_number_course_last10_start_timing_list
+                    )
+                else:
+                    racer.boat_number_course_last10_average_start_timing = None
+                    racer.boat_number_course_last10_start_timing_std = None
+                racer.boat_number_course_last10_1st_rate = round((boat_number_course_last10_1st_count / 10) * 100, 2)
+                racer.boat_number_course_last10_2nd_rate = round((boat_number_course_last10_2nd_count / 10) * 100, 2)
+                racer.boat_number_course_last10_3rd_rate = round((boat_number_course_last10_3rd_count / 10) * 100, 2)
+                racer.boat_number_course_last10_average_rank = numpy.mean(boat_number_course_last10_result_list)
+            else:
+                racer.boat_number_course_last10_average_start_timing = None
+                racer.boat_number_course_last10_start_timing_std = None
+                racer.boat_number_course_last10_1st_rate = None
+                racer.boat_number_course_last10_2nd_rate = None
+                racer.boat_number_course_last10_3rd_rate = None
+                racer.boat_number_course_last10_average_rank = None
+
     Session.commit()
 
 
@@ -1461,18 +1493,18 @@ def predict(target_date: int):
                     Racer.before_info_adjusted_weight.is_not(None),
                     Racer.before_info_display_time.is_not(None),
                     Racer.before_info_tilt.is_not(None),
-                    Racer.last5_1st_rate.is_not(None),
-                    Racer.last5_2nd_rate.is_not(None),
-                    Racer.last5_3rd_rate.is_not(None),
-                    Racer.last5_average_rank.is_not(None),
-                    Racer.last5_average_start_timing.is_not(None),
-                    Racer.last5_start_timing_std.is_not(None),
+                    Racer.last10_average_start_timing.is_not(None),
+                    Racer.last10_start_timing_std.is_not(None),
                     Racer.last10_1st_rate.is_not(None),
                     Racer.last10_2nd_rate.is_not(None),
                     Racer.last10_3rd_rate.is_not(None),
                     Racer.last10_average_rank.is_not(None),
-                    Racer.last10_average_start_timing.is_not(None),
-                    Racer.last10_start_timing_std.is_not(None),
+                    Racer.boat_number_course_last10_average_start_timing.is_not(None),
+                    Racer.boat_number_course_last10_start_timing_std.is_not(None),
+                    Racer.boat_number_course_last10_1st_rate.is_not(None),
+                    Racer.boat_number_course_last10_2nd_rate.is_not(None),
+                    Racer.boat_number_course_last10_3rd_rate.is_not(None),
+                    Racer.boat_number_course_last10_average_rank.is_not(None),
                 )
                 .order_by(Racer.boat_number.asc())
             ).all()
@@ -1628,6 +1660,15 @@ def predict(target_date: int):
                         boat5_period_stat.course5_average_start_rank,
                         boat6_period_stat.course6_average_start_rank,
                     ]
+                    # course_entry_count
+                    course_entry_count_list = [
+                        boat1_period_stat.course1_entry_count,
+                        boat2_period_stat.course2_entry_count,
+                        boat3_period_stat.course3_entry_count,
+                        boat4_period_stat.course4_entry_count,
+                        boat5_period_stat.course5_entry_count,
+                        boat6_period_stat.course6_entry_count,
+                    ]
                     # course_1st_rate
                     course_1st_rate_list = [
                         round((boat1_period_stat.course1_1st_count / boat1_period_stat.course1_entry_count) * 100, 2),
@@ -1696,10 +1737,6 @@ def predict(target_date: int):
                     row.append(round(wind_cos, 4))
                     row.append(race.before_info_water_temperature)
                     row.append(race.before_info_wave_height)
-                    row.append(race.has_stabilizer * round(wind_sin, 4))
-                    row.append(race.has_stabilizer * round(wind_cos, 4))
-                    row.append(race.has_stabilizer * race.before_info_wave_height)
-                    row.append(sex_list.count(2))
 
                     for boat_index in range(6):
                         # racer_class
@@ -1723,6 +1760,14 @@ def predict(target_date: int):
                         row.append(racer_list[boat_index].this_venue_win_rate_z_score)
                         # this_venue_top2_rate
                         row.append(racer_list[boat_index].this_venue_top2_rate)
+                        # this_venue_win_rate_diff_all_venue_win_rate
+                        row.append(
+                            racer_list[boat_index].this_venue_win_rate - racer_list[boat_index].all_venue_win_rate
+                        )
+                        # this_venue_top2_rate_diff_all_venue_top2_rate
+                        row.append(
+                            racer_list[boat_index].this_venue_top2_rate - racer_list[boat_index].all_venue_top2_rate
+                        )
                         # motor_top2_rate
                         row.append(racer_list[boat_index].motor_top2_rate)
                         row.append(racer_list[boat_index].motor_top2_rate_z_score)
@@ -1740,6 +1785,25 @@ def predict(target_date: int):
                         row.append(racer_list[boat_index].before_info_display_time_z_score)
                         # before_info_tilt
                         row.append(racer_list[boat_index].before_info_tilt)
+                        # last10_average_start_timing
+                        row.append(racer_list[boat_index].last10_average_start_timing)
+                        # last10_start_timing_std
+                        row.append(racer_list[boat_index].last10_start_timing_std)
+                        # last10_average_start_timing_diff_average_start_timing
+                        row.append(
+                            racer_list[boat_index].last10_average_start_timing
+                            - racer_list[boat_index].average_start_timing
+                        )
+                        # last10_1st_rate
+                        row.append(racer_list[boat_index].last10_1st_rate)
+                        # last10_2nd_rate
+                        row.append(racer_list[boat_index].last10_2nd_rate)
+                        # last10_3rd_rate
+                        row.append(racer_list[boat_index].last10_3rd_rate)
+                        # last10_average_rank
+                        row.append(racer_list[boat_index].last10_average_rank)
+                        # course_entry_count
+                        row.append(course_entry_count_list[boat_index])
                         # course_average_start_timing
                         row.append(course_average_start_timing_list[boat_index])
                         # course_average_start_rank
@@ -1750,30 +1814,35 @@ def predict(target_date: int):
                         row.append(course_2nd_rate_list[boat_index])
                         # course_3rd_rate
                         row.append(course_3rd_rate_list[boat_index])
-                        # last5_1st_rate
-                        row.append(racer_list[boat_index].last5_1st_rate)
-                        # last5_2nd_rate
-                        row.append(racer_list[boat_index].last5_2nd_rate)
-                        # last5_3rd_rate
-                        row.append(racer_list[boat_index].last5_3rd_rate)
-                        # last5_average_rank
-                        row.append(racer_list[boat_index].last5_average_rank)
-                        # last5_average_start_timing
-                        row.append(racer_list[boat_index].last5_average_start_timing)
-                        # last5_start_timing_std
-                        row.append(racer_list[boat_index].last5_start_timing_std)
-                        # last10_1st_rate
-                        row.append(racer_list[boat_index].last10_1st_rate)
-                        # last10_2nd_rate
-                        row.append(racer_list[boat_index].last10_2nd_rate)
-                        # last10_3rd_rate
-                        row.append(racer_list[boat_index].last10_3rd_rate)
-                        # last10_average_rank
-                        row.append(racer_list[boat_index].last10_average_rank)
-                        # last10_average_start_timing
-                        row.append(racer_list[boat_index].last10_average_start_timing)
-                        # last10_start_timing_std
-                        row.append(racer_list[boat_index].last10_start_timing_std)
+                        # boat_number_course_last10_average_start_timing
+                        row.append(racer_list[boat_index].boat_number_course_last10_average_start_timing)
+                        # boat_number_course_last10_start_timing_std
+                        row.append(racer_list[boat_index].boat_number_course_last10_start_timing_std)
+                        # boat_number_course_last10_average_start_timing_diff_boat_number_course_average_start_timing
+                        row.append(
+                            racer_list[boat_index].boat_number_course_last10_average_start_timing
+                            - course_average_start_timing_list[boat_index]
+                        )
+                        # boat_number_course_last10_1st_rate
+                        row.append(racer_list[boat_index].boat_number_course_last10_1st_rate)
+                        # boat_number_course_last10_2nd_rate
+                        row.append(racer_list[boat_index].boat_number_course_last10_2nd_rate)
+                        # boat_number_course_last10_3rd_rate
+                        row.append(racer_list[boat_index].boat_number_course_last10_3rd_rate)
+                        # boat_number_course_last10_1st_rate_diff_boat_number_course_1st_rate
+                        row.append(
+                            racer_list[boat_index].boat_number_course_last10_1st_rate - course_1st_rate_list[boat_index]
+                        )
+                        # boat_number_course_last10_2nd_rate_diff_boat_number_course_2nd_rate
+                        row.append(
+                            racer_list[boat_index].boat_number_course_last10_2nd_rate - course_2nd_rate_list[boat_index]
+                        )
+                        # boat_number_course_last10_3rd_rate_diff_boat_number_course_3rd_rate
+                        row.append(
+                            racer_list[boat_index].boat_number_course_last10_3rd_rate - course_3rd_rate_list[boat_index]
+                        )
+                        # boat_number_course_last10_average_rank
+                        row.append(racer_list[boat_index].boat_number_course_last10_average_rank)
 
                     # average_start_timing
                     row.append(numpy.std([racer.average_start_timing for racer in racer_list]))
@@ -1793,17 +1862,6 @@ def predict(target_date: int):
                     row.append(average_start_timing_z_score_list[3] - average_start_timing_z_score_list[4])
                     row.append(average_start_timing_z_score_list[3] - average_start_timing_z_score_list[5])
                     row.append(average_start_timing_z_score_list[4] - average_start_timing_z_score_list[5])
-                    boat23456_average_start_timing_z_score_list = [
-                        racer_list[1].average_start_timing_z_score,
-                        racer_list[2].average_start_timing_z_score,
-                        racer_list[3].average_start_timing_z_score,
-                        racer_list[4].average_start_timing_z_score,
-                        racer_list[5].average_start_timing_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].average_start_timing_z_score
-                        - numpy.mean(boat23456_average_start_timing_z_score_list)
-                    )
 
                     # all_venue_win_rate
                     row.append(numpy.std([racer.all_venue_win_rate for racer in racer_list]))
@@ -1823,16 +1881,6 @@ def predict(target_date: int):
                     row.append(all_venue_win_rate_z_score_list[3] - all_venue_win_rate_z_score_list[4])
                     row.append(all_venue_win_rate_z_score_list[3] - all_venue_win_rate_z_score_list[5])
                     row.append(all_venue_win_rate_z_score_list[4] - all_venue_win_rate_z_score_list[5])
-                    boat23456_all_venue_win_rate_z_score_list = [
-                        racer_list[1].all_venue_win_rate_z_score,
-                        racer_list[2].all_venue_win_rate_z_score,
-                        racer_list[3].all_venue_win_rate_z_score,
-                        racer_list[4].all_venue_win_rate_z_score,
-                        racer_list[5].all_venue_win_rate_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].all_venue_win_rate_z_score - numpy.mean(boat23456_all_venue_win_rate_z_score_list)
-                    )
 
                     # this_venue_win_rate
                     row.append(numpy.std([racer.this_venue_win_rate for racer in racer_list]))
@@ -1852,17 +1900,6 @@ def predict(target_date: int):
                     row.append(this_venue_win_rate_z_score_list[3] - this_venue_win_rate_z_score_list[4])
                     row.append(this_venue_win_rate_z_score_list[3] - this_venue_win_rate_z_score_list[5])
                     row.append(this_venue_win_rate_z_score_list[4] - this_venue_win_rate_z_score_list[5])
-                    boat23456_this_venue_win_rate_z_score_list = [
-                        racer_list[1].this_venue_win_rate_z_score,
-                        racer_list[2].this_venue_win_rate_z_score,
-                        racer_list[3].this_venue_win_rate_z_score,
-                        racer_list[4].this_venue_win_rate_z_score,
-                        racer_list[5].this_venue_win_rate_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].this_venue_win_rate_z_score
-                        - numpy.mean(boat23456_this_venue_win_rate_z_score_list)
-                    )
 
                     # motor_top2_rate
                     row.append(numpy.std([racer.motor_top2_rate for racer in racer_list]))
@@ -1882,16 +1919,6 @@ def predict(target_date: int):
                     row.append(motor_top2_rate_z_score_list[3] - motor_top2_rate_z_score_list[4])
                     row.append(motor_top2_rate_z_score_list[3] - motor_top2_rate_z_score_list[5])
                     row.append(motor_top2_rate_z_score_list[4] - motor_top2_rate_z_score_list[5])
-                    boat23456_motor_top2_rate_z_score_list = [
-                        racer_list[1].motor_top2_rate_z_score,
-                        racer_list[2].motor_top2_rate_z_score,
-                        racer_list[3].motor_top2_rate_z_score,
-                        racer_list[4].motor_top2_rate_z_score,
-                        racer_list[5].motor_top2_rate_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].motor_top2_rate_z_score - numpy.mean(boat23456_motor_top2_rate_z_score_list)
-                    )
 
                     # before_info_start_timing
                     row.append(numpy.std([racer.before_info_start_timing_abs for racer in racer_list]))
@@ -1943,17 +1970,6 @@ def predict(target_date: int):
                     row.append(
                         before_info_start_timing_abs_z_score_list[4] - before_info_start_timing_abs_z_score_list[5]
                     )
-                    boat23456_before_info_start_timing_abs_z_score_list = [
-                        racer_list[1].before_info_start_timing_abs_z_score,
-                        racer_list[2].before_info_start_timing_abs_z_score,
-                        racer_list[3].before_info_start_timing_abs_z_score,
-                        racer_list[4].before_info_start_timing_abs_z_score,
-                        racer_list[5].before_info_start_timing_abs_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].before_info_start_timing_abs_z_score
-                        - numpy.mean(boat23456_before_info_start_timing_abs_z_score_list)
-                    )
 
                     # before_info_display_time
                     row.append(numpy.std([racer.before_info_display_time for racer in racer_list]))
@@ -1975,17 +1991,6 @@ def predict(target_date: int):
                     row.append(before_info_display_time_z_score_list[3] - before_info_display_time_z_score_list[4])
                     row.append(before_info_display_time_z_score_list[3] - before_info_display_time_z_score_list[5])
                     row.append(before_info_display_time_z_score_list[4] - before_info_display_time_z_score_list[5])
-                    boat23456_before_info_display_time_z_score_list = [
-                        racer_list[1].before_info_display_time_z_score,
-                        racer_list[2].before_info_display_time_z_score,
-                        racer_list[3].before_info_display_time_z_score,
-                        racer_list[4].before_info_display_time_z_score,
-                        racer_list[5].before_info_display_time_z_score,
-                    ]
-                    row.append(
-                        racer_list[0].before_info_display_time_z_score
-                        - numpy.mean(boat23456_before_info_display_time_z_score_list)
-                    )
 
                     # course_1st_rate
                     row.append(round(course_1st_rate_list[0] - course_1st_rate_list[1], 2))

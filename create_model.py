@@ -53,7 +53,7 @@ def main():
                 model = lightgbm.train(
                     params=params,
                     train_set=train_set,
-                    num_boost_round=5000,
+                    num_boost_round=2000,
                 )
 
                 model.save_model(os.path.join(os.getcwd(), "models", f"{year}_{seed + 1:02d}.txt"))

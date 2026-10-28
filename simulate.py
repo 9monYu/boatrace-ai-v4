@@ -15,7 +15,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("start_date", type=int)
     parser.add_argument("end_date", type=int)
-    parser.add_argument("--bankroll", type=int)
     args = parser.parse_args()
 
     try:
@@ -60,49 +59,37 @@ def main():
         max_dd = 0
         bet_odds_list = []
         hit_odds_list = []
-        bankroll = args.bankroll
         progress_bar = tqdm(race_list)
         for index, race in enumerate(progress_bar):
             if index % 100 == 0:
                 progress_bar.set_description(f"{race.id}")
-            bet_unit = 100
-            if bankroll is not None:
-                bet_unit = bankroll // 200000 * 100
-                if bet_unit < 100:
-                    bet_unit = 100
-                elif bet_unit > 5000:
-                    bet_unit = 5000
-                else:
-                    pass
             ticket_list = Session.scalars(
                 select(Ticket).where(
                     Ticket.race_id == race.id,
-                    tuple_(Ticket.first, Ticket.second).in_(
-                        [
-                            (2, 1),
-                            (2, 3),
-                            (2, 4),
-                            (3, 1),
-                            (3, 2),
-                            (4, 3),
-                            (4, 5),
-                            (4, 6),
-                            (5, 1),
-                            (5, 2),
-                        ]
-                    ),
-                    Ticket.deadline_odds >= 100.0,
-                    Ticket.deadline_odds < 400.0,
-                    Ticket.deadline_odds_expected_value >= 1.15,
-                    Ticket.deadline_odds_expected_value < 1.40,
+                    # tuple_(Ticket.first, Ticket.second).in_(
+                    #     [
+                    #         (2, 1),
+                    #         (2, 3),
+                    #         (2, 4),
+                    #         (3, 1),
+                    #         (3, 2),
+                    #         (4, 3),
+                    #         (4, 5),
+                    #         (4, 6),
+                    #         (5, 1),
+                    #         (5, 2),
+                    #     ]
+                    # ),
+                    # Ticket.deadline_odds >= 100.0,
+                    # Ticket.deadline_odds < 400.0,
+                    Ticket.deadline_odds_expected_value >= 1.00,
+                    Ticket.deadline_odds_expected_value < 2.00,
                 )
             ).all()
             if ticket_list:
                 bet_race += 1
                 for ticket in ticket_list:
-                    bet_money += bet_unit
-                    if bankroll is not None:
-                        bankroll -= bet_unit
+                    bet_money += 100
                     bet_odds_list.append(ticket.deadline_odds)
                     row = []
                     row.append(race.id)
@@ -111,14 +98,12 @@ def main():
                     row.append(race.venue)
                     row.append(f"{ticket.first}-{ticket.second}-{ticket.third}")
                     row.append(ticket.deadline_odds)
-                    row.append(bet_unit)
+                    row.append(100)
                     if ticket.is_win == 1:
                         hit_race += 1
-                        hit_money += round(bet_unit * race.odds_trifecta)
-                        if bankroll is not None:
-                            bankroll += round(bet_unit * race.odds_trifecta)
+                        hit_money += round(100 * race.odds_trifecta)
                         hit_odds_list.append(race.odds_trifecta)
-                        row.append(round(bet_unit * race.odds_trifecta))
+                        row.append(round(100 * race.odds_trifecta))
                     else:
                         row.append(0)
                     writer.writerow(row)
@@ -126,8 +111,6 @@ def main():
                     peak = hit_money - bet_money
                 if hit_money - bet_money - peak < max_dd:
                     max_dd = hit_money - bet_money - peak
-            if bankroll is not None and bankroll < 0:
-                break
 
         hit_rate = round((hit_race / bet_race) * 100, 1) if bet_race > 0 else 0.0
         roi = round((hit_money / bet_money) * 100, 1) if bet_money > 0 else 0.0

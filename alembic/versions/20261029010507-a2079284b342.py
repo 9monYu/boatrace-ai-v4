@@ -1,8 +1,8 @@
 """
 
-Revision ID: d8e12cee0802
+Revision ID: a2079284b342
 Revises: 
-Create Date: 2026-10-12 22:36:22.134130
+Create Date: 2026-10-29 01:05:07.850507
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd8e12cee0802'
+revision: str = 'a2079284b342'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -170,30 +170,18 @@ def upgrade() -> None:
     sa.Column('before_info_display_time', sa.REAL(), nullable=True),
     sa.Column('before_info_display_time_z_score', sa.REAL(), nullable=True),
     sa.Column('before_info_tilt', sa.REAL(), nullable=True),
-    sa.Column('last5_1st_rate', sa.REAL(), nullable=True),
-    sa.Column('last5_2nd_rate', sa.REAL(), nullable=True),
-    sa.Column('last5_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('last5_average_rank', sa.REAL(), nullable=True),
-    sa.Column('last5_average_start_timing', sa.REAL(), nullable=True),
-    sa.Column('last5_start_timing_std', sa.REAL(), nullable=True),
+    sa.Column('last10_average_start_timing', sa.REAL(), nullable=True),
+    sa.Column('last10_start_timing_std', sa.REAL(), nullable=True),
     sa.Column('last10_1st_rate', sa.REAL(), nullable=True),
     sa.Column('last10_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('last10_3rd_rate', sa.REAL(), nullable=True),
     sa.Column('last10_average_rank', sa.REAL(), nullable=True),
-    sa.Column('last10_average_start_timing', sa.REAL(), nullable=True),
-    sa.Column('last10_start_timing_std', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_1st_rate', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_2nd_rate', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_3rd_rate', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_average_rank', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_average_start_timing', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last5_start_timing_std', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_average_start_timing', sa.REAL(), nullable=True),
+    sa.Column('boat_number_course_last10_start_timing_std', sa.REAL(), nullable=True),
     sa.Column('boat_number_course_last10_1st_rate', sa.REAL(), nullable=True),
     sa.Column('boat_number_course_last10_2nd_rate', sa.REAL(), nullable=True),
     sa.Column('boat_number_course_last10_3rd_rate', sa.REAL(), nullable=True),
     sa.Column('boat_number_course_last10_average_rank', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last10_average_start_timing', sa.REAL(), nullable=True),
-    sa.Column('boat_number_course_last10_start_timing_std', sa.REAL(), nullable=True),
     sa.Column('course', sa.INTEGER(), nullable=True),
     sa.Column('start_timing', sa.REAL(), nullable=True),
     sa.Column('result', sa.INTEGER(), nullable=True),
